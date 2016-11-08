@@ -1,0 +1,82 @@
+{
+    "IDtag": "001",
+    "clean_id": "true",
+    "id_suffix": "wcm",
+    "fix_ids_for_overlay": "true",
+    "warn_non_e": "true",
+    "warn_non_eng_cat_lang": "true",
+    "update_reason_processing": "true",
+    "update_reasons": {
+	"Added to collection": "keep",
+	"KB collection name change": "discard",
+	"KB provider name change": "discard",
+	"KB URL change": "keep",
+	"Master record 040 $e RDA change": "keep",
+	"Master record encoding level change": "keep",
+	"Master record variable field(s) change": "keep",
+	"OCLC control number change": "keep",
+	"Removed from collection": "keep"
+    },
+    "set AC on Elvl": "true",
+    "override AC based on current": "true",
+    "add AC fields": [
+	{
+	    "tag": "599",
+	    "i1": " ",
+	    "i2": " ",
+	    "subfields": [
+		{
+		    "delimiter": "a",
+		    "value": "LTIEXP"
+		}
+	    ]
+	}
+    ],
+    "add noAC fields": [
+	{
+	    "tag": "915",
+	    "i1": " ",
+	    "i2": " ",
+	    "subfields": [
+		{
+		    "delimiter": "9",
+		    "value": "NOTAUTHO"
+		}
+	    ]
+	},
+	{
+	    "tag": "949",
+	    "i1": " ",
+	    "i2": " ",
+	    "subfields": [
+		{
+		    "delimiter": "a",
+		    "value": "*b3=x"
+		}
+	    ]
+	}
+    ],
+    "Elvl AC decisions": {
+	"2": "noAC",
+	"3": "noAC",
+    	"4": "noAC",
+    	"5": "noAC",
+    	"7": "noAC",
+    	"8": "noAC",
+    	"K": "noAC",
+    	"L": "noAC",
+    	"M": "noAC",
+    	"J": "noAC",
+    	" ": "AC",
+    	"1": "AC",
+        "I": "AC"
+    },
+    "fields under AC": [
+	"100", "110", "111", "130",
+	"600", "610", "611", "630", "655",
+	"700", "710", "711", "730",
+	"800", "810", "811", "830"
+    ],
+    "write_warnings_to_999s": "true",
+    "write_warnings_to_log": "true"
+}
