@@ -1,7 +1,7 @@
 {
     "IDtag": "001",
     "clean_id": "true",
-    "id_suffix": "wcm",
+    "id_suffix": "gsw",
     "fix_ids_for_overlay": "true",
     "warn_non_e": "true",
     "warn_non_eng_cat_lang": "true",
@@ -18,7 +18,9 @@
 	"Removed from collection": "keep"
     },
     "set AC on Elvl": "true",
+    "set AC on existing": "true",
     "override AC based on current": "true",
+    "keep ebk 655s": "false",
     "add AC fields": [
 	{
 	    "tag": "599",
@@ -71,12 +73,6 @@
     	"1": "AC",
         "I": "AC"
     },
-    "fields under AC": [
-	"100", "110", "111", "130",
-	"600", "610", "611", "630", "655",
-	"700", "710", "711", "730",
-	"800", "810", "811", "830"
-    ],
     "write_warnings_to_999s": "true",
     "write_warnings_to_log": "true"
 }

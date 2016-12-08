@@ -6,6 +6,7 @@ module ClassicCatalog
     attr_reader :url
     attr_reader :status
     attr_reader :rec_data
+    attr_accessor :marc
     attr_reader :valid_result
 
     def initialize(id)
@@ -20,14 +21,14 @@ module ClassicCatalog
         pagerec = pagerec.gsub!(/<\/pre>.*/m, '')
         pagerec = pagerec.gsub!(/^LEADER /, 'LDR    ')
         fields = pagerec.split("\n")
-        
+#puts fields
         indexes = []
         fields.each do |f|
           if f =~ /^\s+/
             indexes << fields.index(f)
           end
         end
-        
+#puts indexes        
         if indexes.size > 0
           indexes.reverse!
           indexes.each do |i|
@@ -39,10 +40,12 @@ module ClassicCatalog
             fields[prev] = replace
             fields.delete_at(i)
           end
+          fields.each {|f| f.gsub!(/(\|x\d{4}-) (\d{4})/, '\1\2')}
+          @rec_data = fields
+        else
+          @rec_data = nil
         end
-        @rec_data = fields
-      else
-        @rec_data = nil
+        @marc = nil
       end
     end
 
@@ -109,7 +112,9 @@ module MARC
     attr_accessor :retain_based_on_update_reason
     attr_accessor :elvl_ac
     attr_accessor :existing_ac
+    attr_accessor :ac_action
     attr_accessor :overlay_point
+    attr_accessor :ac_fields
 
 
     # call-seq:
@@ -138,10 +143,12 @@ module MARC
       @reasons_for_update = []
       @changed_fields = []
       @retain_based_on_update_reason = true
+      @ac_action = nil
       @elvl_ac = false
       @under_ac_already = false
       @overlay_point = []
       @existing_ac = false
+      @ac_fields = []
     end
 
     def <=>(another_record)
@@ -188,6 +195,15 @@ module MARC
     def delete_fields_by_tag(mytag)
       self.each_by_tag(mytag) do |f|
         self.fields.delete(f)
+      end
+      return self
+    end
+
+    def delete_ebk_655s
+      self.each_by_tag("655") do |f|
+        if f.to_s =~ /\$a ?(Electronic book|E-?book)/i
+          self.fields.delete(f)
+        end
       end
       return self
     end
