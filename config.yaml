@@ -1,23 +1,123 @@
 ---
 # In specifying MARC fields/subfields:
- # if indicator value is irrelevant, it should be: '.', which means "match anything"
+  # if indicator value is irrelevant, it should be: '.', which means "match anything"
 
 # settings at the institution/ILS level
-institution:
+institution: 
   # Primary expected overlay/match point field in ILS
-  record id:
+  record id: 
     tag: '001'
+    
   # If true, removes ocm, ocn, on prefixes and / suffixes from end of record_id value
   clean ids: true
+
   # If true, adds/handles a suffix on the record_id value
   # The suffix(es) to be used are set up in workflow config below
   use id suffix: true
+
   # If true, ensures the relevant 019$a is moved to the beginning of 019 field to achieve overlay
   fix 019 for overlay: true
+
+  # If true, LDR/17 (Encoding Level) determines whether record will be put under
+  #  authority control (AC) in ILS
   elvl sets AC status: true
-
   
+  # Only relevant if elvl sets AC status = true
+  # Sets AC status for each LDR/17 value
+  elvl AC map:
+    '2': 'noAC'
+    '3': 'noAC'
+    '4': 'noAC'
+    '5': 'noAC'
+    '7': 'noAC'
+    '8': 'noAC'
+    'K': 'noAC'
+    'L': 'noAC'
+    'M': 'noAC'
+    'J': 'noAC'
+    ' ': 'AC'
+    '1': 'AC'
+    'I': 'AC'
+    
+  # If true, you must specify what field(s) you want added to records under AC
+  add AC MARC fields: true
+  
+  # Specify what field(s) should be added to AC records
+  add AC MARC spec:
+    - tag: '599'
+      i1: ' '
+      i2: ' '
+      subfields:
+        - delimiter: 'a'
+          value: 'LTIEXP'
+            
+    - tag: '915'
+      i1: '9'
+      i2: '9'
+      subfields:
+        - delimiter: 'a'
+          value: 'Under'
+        - delimiter: 'b'
+          value: 'Authority Control'
+          
+  # If true, you must specify what field(s) you want added to records NOT under AC
+  add noAC MARC fields: true
 
+  # Specify what field(s) should be added to noAC records
+  add noAC MARC spec:
+    - tag: '915'
+      i1: ' '
+      i2: ' '
+      subfields:
+        - delimiter: '9'
+          value: 'NOTAUTHO'
+    - tag: '949'
+      i1: ' '
+      i2: ' '
+      subfields:
+        - delimiter: 'a'
+          value: 'Under'
+        - delimiter: 'a'
+          value: '*b3=x'
+          
+  # If true, compare heading fields that are under AC with last processed/loaded file
+  # Useful if you need to pay a fee per updated record submitted to AC vendor
+  # If true, you must configure 'fields under AC' to tell the script what fields should
+  #  be included in comparison
+  flag AC recs with changed headings: true
+  
+  # Specify what fields are under authority control
+  # Use regular expression syntax:
+  #  tag: 1.. = 100, 110, 111, 130
+  #  tag: 11. = 100, 110, 111
+  #  i1: [024] = 1st indicator is 0, 2, or 4
+  #  i1: [^7] = 1st indicator is NOT 7
+  # For field has and field doesn't have values:
+  #  The field data you need to be matching will look like:
+  #   $aConsilience :$bthe unity of knowledge \$cby Edward O.
+  # Make sure you escape your subfield delimiters!
+  #  \$a will match $a
+  fields under AC:
+    - tag: '1..'
+    - tag: '240'
+    - tag: '4([04]0|1[01])'
+    - tag: '490'
+      i1: '0'
+    - tag: '6([013].|5[01])'
+      i2: '[ 012]'
+    - tag: '6([013].|5[01])'
+      i2: '7'
+      field has: '\$2(lcsh|mesh|lcac)'
+    - tag: '655'
+      i2: '0'
+      field does not have: '\$aElectronic book'
+    - tag: '655'
+      i2: '7'
+      field has: '\$2(lcsh|mesh|lcgft|gsafd)'
+      field does not have: '\$aElectronic book'
+    - tag: '7([03]0|1[01])' #700, 710, 711, 730
+    - tag: '8([034]0|1[01])'
+      
 # settings for individual collections/file segments/workflows
 # workflows must be set up here to be choosable when script is run
 workflows:
