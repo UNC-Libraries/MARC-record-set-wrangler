@@ -1,0 +1,23 @@
+---
+# In specifying MARC fields/subfields:
+ # if indicator value is irrelevant, it should be: '.', which means "match anything"
+
+# settings at the institution/ILS level
+institution:
+  # Primary expected overlay/match point field in ILS
+  record id:
+    tag: '001'
+  # If true, removes ocm, ocn, on prefixes and / suffixes from end of record_id value
+  clean ids: true
+  # If true, adds/handles a suffix on the record_id value
+  # The suffix(es) to be used are set up in workflow config below
+  use id suffix: true
+  # If true, ensures the relevant 019$a is moved to the beginning of 019 field to achieve overlay
+  fix 019 for overlay: true
+  elvl sets AC status: true
+
+  
+
+# settings for individual collections/file segments/workflows
+# workflows must be set up here to be choosable when script is run
+workflows:

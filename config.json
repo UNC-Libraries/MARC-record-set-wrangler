@@ -21,6 +21,19 @@
     "set AC on existing": "true",
     "override AC based on current": "true",
     "keep ebk 655s": "false",
+    "omit from comparison": [
+	{"tag": "005"},
+	{"tag": "598",
+	 "value": "Reason for updated record:"},
+	{"tag": "650",
+	 "value": "Electronic book"},
+	{"tag": "655",
+	 "value": "Electronic book"},
+	{"tag": "938"},
+	{"tag": "994"}
+    ],
+    "AC heading fields": [
+    ],
     "add AC fields": [
 	{
 	    "tag": "599",
