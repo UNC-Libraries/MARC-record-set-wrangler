@@ -39,15 +39,40 @@ institution:
     tag: '001'
     
   # If true, removes ocm, ocn, on prefixes and / suffixes from end of record_id value
+  # This needs to be true if you expect an overlay on 019
   clean ids: true
 
-  # If true, adds/handles a suffix on the record_id value
+  # If true, adds/handles a suffix on the record_id value and 019 values
   # The suffix(es) to be used are set up in workflow config below
   use id suffix: true
 
+  # If not blank (''), this suffix will be added to the end of record id and 019 values for
+  #  all incoming records.
+  # You can configure set/workflow specific suffixed too, but they will be appended after this one
+  global id suffix: 'wcm'
+
+  # You may have OCN123 in your ILS
+  # In WorldCat, this record may have been merged into OCN234.
+  # OCN234's 019 field will now contain a $a123
+  # OCN234 is delivered to you.
+  # If your ILS can overlay the existing OCN123 with incoming OCN234 based on presence of "019 $a123"
+  #  in OCN234, this should be set to true
+  overlay matchpoint includes 019: true
+  
   # If true, ensures the relevant 019$a is moved to the beginning of 019 field to achieve overlay
   # Useful if your system can't handle matching on subsequent 019s for whatever reason
   manipulate 019 for overlay: true
+
+  # If true, MARC field will be added to every record expected to overlay, specifying whether overlay
+  #  is expected to be on main record ID or between existing:record ID and incoming:019
+  # If true, make sure to configure 'overlay type flag spec'
+  flag overlay type: true
+
+  # What MARC field should the overlay type be written to?
+  overlay type flag spec:
+    - tag: '999'
+      i1: '8'
+      i2: '8'
 
   # If true, check each incoming record to determine whether it looks like it's a record for
   #  an e-resource
@@ -93,6 +118,7 @@ institution:
   # This is helpful if you want to avoid re-loading a bunch of records that haven't actually
   #  changed. 
   # If this is true, you must configure 'omit from comparison fields' below to include at least the
+
   #  005 field, which will be different in each record set delivered
   distinguish real updates: true
 
@@ -231,3 +257,48 @@ institution:
 # settings for individual collections/file segments/workflows
 # workflows must be set up here to be choosable when script is run
 workflows:
+  ACS:
+    suffix: 'ACS'
+  AGU:
+    suffix: 'AGU'
+  AMS:
+    suffix: 'AMS'
+  CIAO:
+    suffix: 'CIAO'
+  CUP:
+    suffix: 'CUP'
+  DGcolumbia:
+    suffix: 'DGcolumbia'
+  DGedition:
+    suffix: 'DGedition'
+  DGharvard:
+    suffix: 'DGharvard'
+  DGpenn:
+    suffix: 'DGpenn'
+  DGprinceton:
+    suffix: 'DGprinceton'
+  DynCUP:
+    suffix: 'DynCUP'
+  EMS:
+    suffix: 'EMS'
+  GSW:
+    suffix: 'GSW'
+  RSC:
+    suffix: 'RSC'
+  SPIE:
+    suffix: 'SPIE'
+  SPR2016:
+    suffix: 'SPR2016'
+  SPR2017:
+    suffix: 'SPR2017'
+  SPRgratis:
+    suffix: 'SPRgrat'
+  SPRolder:
+    suffix: 'SPRo'
+  SciDir:
+    suffix: 'SciDir'
+  SerAsMono:
+    suffix: 'SerAsMono'
+  Video:
+    suffix: 'SV'
+
