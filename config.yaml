@@ -1,6 +1,36 @@
 ---
-# In specifying MARC fields/subfields:
-  # if indicator value is irrelevant, it should be: '.', which means "match anything"
+# Special syntax instructions for the following options:
+# - omit from comparison fields
+# - fields under AC
+
+# These control what fields should be included or excluded in various types of processing. The data
+#  you can define include:
+#   - MARC tag
+#   - i1 value
+#   - i2 value
+#   - 'field has' value
+#   - 'field does not have' value
+
+# You only need to specify as much is necessary to meet your needs.
+# If all 500 fields should be excluded, only specify the tag.
+# If you need to be extremely specific, you can specify all 5 values!
+
+# Each part starting with '- tag:' specifies criteria that are ANDed together.
+
+# Use regular expression syntax (however, matching will be case INSENSITIVE):
+#  tag: ^1 = 100, 110, 111, 130
+#  tag: 11. = 110, 111
+#  i1: [024] = 1st indicator is 0, 2, or 4
+#  i1: [^7] = 1st indicator is NOT 7
+
+# For 'field has' and 'field does not have' values:
+#  The field data you need to be matching will look like:
+#   $aConsilience :$bthe unity of knowledge \$cby Edward O.
+# Make sure you escape your subfield delimiters!
+#  \$a will match $a
+# You can specify multiple criteria with regexp syntax, like:
+#  \$2(lcsh|mesh)
+#  ebrary|ebl|proquest central
 
 # settings at the institution/ILS level
 institution: 
@@ -16,7 +46,97 @@ institution:
   use id suffix: true
 
   # If true, ensures the relevant 019$a is moved to the beginning of 019 field to achieve overlay
-  fix 019 for overlay: true
+  # Useful if your system can't handle matching on subsequent 019s for whatever reason
+  manipulate 019 for overlay: true
+
+  # If true, check each incoming record to determine whether it looks like it's a record for
+  #  an e-resource
+  e-format record check: true
+
+  # If true, a warning will be issued about non-e-resource records
+  # 'e-format record check' must be true
+  warn about non-e-resource records: true
+
+  # If true, check language of cataloging in each incoming record
+  # You must configure 'languages of cataloging' below
+  cat lang record check: true
+
+  # Set your acceptable language(s) of cataloging below. (One per line, starting with -)
+  cat lang:
+    - 'eng'
+  # - 'fre'
+
+  # If true, a warning will be issued about records not in your acceptable lang of cataloging
+  # 'cat lang record check' must be true
+  warn about cat lang: true
+
+  # If true, warnings about a MARC record will be written to a MARC field in that record
+  # You must configure which field in 'warning flag spec' below
+  write warnings to recs: true
+
+  # What field should the warnings above be written to?
+  warning flag spec:
+    - tag: '666'
+      i1: ' '
+      i2: ' '
+
+  # If true, warnings will also be written to a .csv logfile
+  log warnings: true
+      
+  # If true, incoming records (new and update) will be compared to last-loaded file to determine
+  #  which incoming records should actually insert as new in your system
+  discern true adds: true
+
+  # If true, incoming records (new and update) will be compared to last-loaded file to determine
+  #  - which incoming records should actually overlay in your system
+  #  - if each incoming record that would overlay in your system has actually changed
+  # This is helpful if you want to avoid re-loading a bunch of records that haven't actually
+  #  changed. 
+  # If this is true, you must configure 'omit from comparison fields' below to include at least the
+  #  005 field, which will be different in each record set delivered
+  distinguish real updates: true
+
+  # Tells which MARC fields to ignore when determining whether a record has changed since you
+  #  last loaded it.
+  # Only needed if you have 'distinguish real updates' = true
+  # Must at least contain the 005 field. Otherwise, all records will always appear updated
+  omit from comparison fields:
+    - tag: '005'
+    - tag: '598'
+      field has: 'Reason for updated record:'
+    - tag: '655'
+      field has: 'Electronic book'
+    - tag: '938'
+    - tag: '994'
+
+  # If true, add a "diff status since last load" MARC field to incoming records
+  # You will need to configure 'diff status flag spec'
+  # Requires both 'distinguish real updates' and 'distinguish true adds' = true
+  flag diff status: true
+
+  diff status flag spec:
+    - tag: '999'
+      i1: '9'
+      i2: '9'
+
+  # If you have both 'distinguish real updates' and 'distinguish true adds' = true, then the
+  #  following categories of incoming records are going to be known at this point:
+  #  - CHANGE - expected overlays that have changed since last load
+  #  - STATIC - expected overlays that have not changed since last load
+  #  - ADD - expected inserts
+  # Below, configure the file suffixes you want appended to the output files each type will
+  #  be written to.
+  #  'do not output' will cause that type of record to... not be output
+  #  Assigning the same suffix to all three would cause them to all be written to the same file.
+  incoming record output files:
+    CHANGE: '_change'
+    STATIC: 'do not output'
+    ADD: '_add'
+
+  # If true, use comparison of incoming and last-loaded files to produce a file of deletes
+  # This file will contain all records from last-loaded file that will not be overlaid
+  #  (on record id or 019 value (if set to do that).
+  produce delete file: true
 
   # If true, LDR/17 (Encoding Level) determines whether record will be put under
   #  authority control (AC) in ILS
@@ -87,16 +207,6 @@ institution:
   flag AC recs with changed headings: true
   
   # Specify what fields are under authority control
-  # Use regular expression syntax:
-  #  tag: 1.. = 100, 110, 111, 130
-  #  tag: 11. = 100, 110, 111
-  #  i1: [024] = 1st indicator is 0, 2, or 4
-  #  i1: [^7] = 1st indicator is NOT 7
-  # For field has and field doesn't have values:
-  #  The field data you need to be matching will look like:
-  #   $aConsilience :$bthe unity of knowledge \$cby Edward O.
-  # Make sure you escape your subfield delimiters!
-  #  \$a will match $a
   fields under AC:
     - tag: '1..'
     - tag: '240'
