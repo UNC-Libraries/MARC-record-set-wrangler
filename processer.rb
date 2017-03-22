@@ -28,7 +28,7 @@ until config['workflows'].has_key?(segment)
 end
 wconfig = config['workflows'][segment]
 iconfig = config['institution']
-idtag = iconfig['record id']['tag']
+@idtag = iconfig['record id']['tag']
 
 # Pull in our incoming and previously loaded MARC records
 def get_recs(dir)
@@ -43,6 +43,7 @@ def get_recs(dir)
 end
 
 in_mrc = get_recs(in_dir)
+
 ex_mrc = get_recs(ex_dir)
 
 # Set suffix if it's going to be used, otherwise it is blank string
@@ -55,22 +56,92 @@ if iconfig['use id suffix']
 puts "\n\nSuffix I will use is: #{suffix}"
 end
 
-# Clean IDs in both files if config says.
-# Set up array of existing record ids for comparing sets
-# Set record.overlay_point to idtag if there's a match on main record id
-# NOTE: Since we are comparing original files, we don't need to add id suffixes until we output
-#  the processed records.
-ex_ids = []
-if iconfig['clean ids']
-  def clean_id(rec, tag)
-    id = rec[tag].value
-    newid = id.gsub(/^(oc[mn]|on)/, '').gsub(/ *$/, '').gsub(/\\$/, '')
-    rec[tag].value = newid
-    return rec
-  end
-  ex_mrc.each { |rec| clean_id(rec, idtag) ; ex_ids << rec[idtag].value }
-  in_mrc.each { |rec| clean_id(rec, idtag) ; rec.overlay_point << idtag if ex_ids.include?(rec[idtag].value) }
+def clean_id(rec, tag)
+  id = rec[tag].value
+  newid = id.gsub(/^(oc[mn]|on)/, '').gsub(/ *$/, '').gsub(/\\$/, '')
+  rec[tag].value = newid
+  return rec
 end
+
+# NOTE: Since we are comparing original files below, we don't need to add id suffixes
+#  until we output the processed records.
+
+# Clean IDs in if config says.
+# Set up hash of existing records, keyed by @idtag value, for comparing sets
+# rec.overlay_point of {'019'=>x} here means:
+#  - this record will be overlaid by incoming record with @idtag value x
+#  - incoming record's @idtag value x presumably does NOT match this record's
+#  -   @idtag value
+#  - the overlay will be on an 019$a value in the incoming record
+@ex_ids = {}
+
+ex_mrc.each { |rec|
+  clean_id(rec, @idtag) if iconfig['clean ids']
+  @ex_ids[rec[@idtag].value] = rec
+}
+
+def get_019_matches(rec)
+  my019s = rec.get_019_vals
+  if my019s.size > 0
+    match019 = []
+    my019s.each do |chkid|
+      if @ex_ids.has_key?(chkid)
+        match019 << chkid
+        rec.overlay_point << {'019' => chkid}
+        @ex_ids[chkid].overlay_point << {'019' => rec[@idtag].value}
+
+        # Interpreting 019-related .overlay_point values
+        # {'019'=>'x'}
+        # INCOMING RECORD
+        # x = the @recid value in the existing record that will get overlaid
+        #     this incoming rec's 019$a value that matches the @recid value in existing record
+        # EXISTING RECORD
+        # x = the @recid value of the record that will overlay this record
+      end
+    end
+  end
+end
+
+def put_matching_019_sf_first(rec)
+  my019s = rec.get_019_vals
+  match019 = ''
+  rec.overlay_point.each { |op|
+    match019 = op['019'] if op.has_key?('019')
+  }
+  nomatch019 = []
+  my019s.each { |id| nomatch019 << id unless id == match019 }
+  rec.delete_fields_by_tag('019')
+  newfield = (MARC::DataField.new('019', ' ', ' ', ['a', match019]))
+  if nomatch019.size > 0
+    nomatch019.each { |e| newfield.append(MARC::Subfield.new('a', e)) }
+  end
+  rec.append(newfield)
+end
+    
+
+# Clean IDs in if config says.
+in_mrc.each { |rec|
+  clean_id(rec, @idtag) if iconfig['clean ids']
+  # Set record.overlay_point of incoming record to @idtag info if there's a match on main record id
+  # Since this match relies on main record id being the same in incoming and existing
+  #  records, also set record.overlay_point of existing record.
+  if @ex_ids.has_key?(rec[@idtag].value)
+    op = {@idtag => rec[@idtag].value}
+    rec.overlay_point << op
+    exrec = @ex_ids[rec[@idtag].value]
+    exrec.overlay_point << op
+  end
+
+  if iconfig['overlay matchpoint includes 019']
+    # Check for overlays between existing 001 and any 019$a in an incoming record
+    get_019_matches(rec)
+  end
+
+  if iconfig['manipulate 019 for overlay']
+    rec.overlay_point.each { |op| put_matching_019_sf_first(rec) if op.has_key?('019') }
+  end
+}
+
 
 
 

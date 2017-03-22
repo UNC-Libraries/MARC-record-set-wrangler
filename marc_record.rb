@@ -12,7 +12,6 @@ module MARC
     attr_accessor :overlay_point
     attr_accessor :ac_fields
 
-
     # call-seq:
     #   rec.countf(tag) => integer
     # Returns number of fields in the record that match the field tag given as an argument.
@@ -41,6 +40,8 @@ module MARC
       @elvl_ac = false
       # Tag(s) on which overlay could happen.
       # Expect one, but could be multiple, in which case you might want to make a warning happen
+      # Elements of the array will be like:
+      #  {'001' => '87654980'} (field on which overlay will happen, matching value)
       @overlay_point = []
       @ac_fields = []
     end
