@@ -197,6 +197,17 @@ in_mrc.each { |rec|
     end
   end
 
+  if iconfig['warn about cat lang']
+    catlangs = iconfig['cat lang']
+    puts catlangs.inspect
+    reclang = rec.cat_lang
+    puts reclang
+    unless catlangs.include?(reclang)
+      rec.warnings << 'Not our language of cataloging'
+      puts "lang of cat problem!"
+    end
+  end
+
   if iconfig['write warnings to recs']
     if rec.warnings.size > 0
       rec.warnings.each { |w|
