@@ -179,10 +179,22 @@ in_mrc.each { |rec|
     add_marc_var_fields_replacing_values(rec, iconfig['overlay type flag spec'], [{'[OVTYPE]'=>ovtype}])
   end
 
+  if iconfig['warn about non-e-resource records']
+    if rec.is_e_rec? == 'no'
+      rec.warnings << 'Not an e-resource record?'
+    end
+  end
 
+  if iconfig['write warnings to recs']
+    if rec.warnings.size > 0
+      rec.warnings.each { |w|
+        add_marc_var_fields_replacing_values(rec, iconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
+      }
+    end
+  end
   out_mrc.write(rec)
 }
-  pp(iconfig['overlay type flag spec'])
+
 
 
 

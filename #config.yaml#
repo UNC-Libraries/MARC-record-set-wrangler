@@ -84,26 +84,18 @@ institution:
           - 'b'
           - '[OVTYPE]'
 
-  # If true, check each incoming record to determine whether it looks like it's a record for
-  #  an e-resource
-  e-format record check: true
 
   # If true, a warning will be issued about non-e-resource records
-  # 'e-format record check' must be true
   warn about non-e-resource records: true
 
-  # If true, check language of cataloging in each incoming record
-  # You must configure 'languages of cataloging' below
-  cat lang record check: true
+  # If true, a warning will be issued about records not in your acceptable lang of cataloging
+  # You must configure 'languages of cataloging' below  
+  warn about cat lang: true
 
   # Set your acceptable language(s) of cataloging below. (One per line, starting with -)
   cat lang:
     - 'eng'
   # - 'fre'
-
-  # If true, a warning will be issued about records not in your acceptable lang of cataloging
-  # 'cat lang record check' must be true
-  warn about cat lang: true
 
   # If true, warnings about a MARC record will be written to a MARC field in that record
   # You must configure which field in 'warning flag spec' below
@@ -134,7 +126,6 @@ institution:
   # This is helpful if you want to avoid re-loading a bunch of records that haven't actually
   #  changed. 
   # If this is true, you must configure 'omit from comparison fields' below to include at least the
-
   #  005 field, which will be different in each record set delivered
   distinguish real updates: true
 
