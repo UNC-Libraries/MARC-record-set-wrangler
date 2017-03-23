@@ -1,4 +1,5 @@
 $LOAD_PATH << '.'
+require 'csv'
 require 'yaml'
 require 'marc'
 require 'marc_record'
@@ -10,14 +11,6 @@ config = begin
          rescue ArgumentError => e
            puts "Could not parse YAML config file: #{e.message}"
          end
-
-# Set up in/out directories
-in_dir = 'incoming_marc'
-ex_dir = 'last_processed_marc_ORIG'
-out_dir = 'output'
-
-# Set up MARC writers
-out_mrc = MARC::Writer.new("#{out_dir}/output.mrc")
 
 # Find out what workflow we're dealing with and set workflow config
 puts "\n\nEnter file segment/workflow you are processing (SPR2017, AMS, etc.):"
@@ -34,12 +27,31 @@ wconfig = config['workflows'][segment]
 iconfig = config['institution']
 idtag = iconfig['record id']['tag']
 
+# Set up in/out directories
+in_dir = 'incoming_marc'
+ex_dir = 'last_processed_marc_ORIG'
+out_dir = 'output'
+
+# Set up MARC writers
+out_mrc = MARC::Writer.new("#{out_dir}/output.mrc")
+
+# Set up logging, if specified
+if iconfig['log warnings']
+  log = CSV.open("#{out_dir}/log.csv", "wb")
+  log << ['filename', 'rec id', 'warning']
+end
+
 # Pull in our incoming and previously loaded MARC records
 def get_recs(dir)
   recs = []
   Dir.chdir(dir)
   infiles = Dir.glob('*.mrc')
-  infiles.each { |file| MARC::Reader.new(file).each { |rec| recs << rec } }
+  infiles.each { |file|
+    MARC::Reader.new(file).each { |rec|
+      rec.source_file = "#{dir}/#{file}"
+      recs << rec
+    }
+  }
   puts "\n\nGrabbed #{recs.size} records from the following #{dir} files:"
   puts infiles
   Dir.chdir('..')
@@ -143,7 +155,7 @@ def add_marc_var_fields_replacing_values(rec, fspec, replaces)
 end
 
 
-# Clean IDs in if config says.
+# Process incoming records
 in_mrc.each { |rec|
   clean_id(rec, idtag) if iconfig['clean ids']
   # Set record.overlay_point of incoming record to idtag info if there's a match on main record id
@@ -189,14 +201,20 @@ in_mrc.each { |rec|
     if rec.warnings.size > 0
       rec.warnings.each { |w|
         add_marc_var_fields_replacing_values(rec, iconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
+        if iconfig['log warnings']
+          log << [rec.source_file, rec[idtag].value, w]
+        end
       }
     end
   end
+  
   out_mrc.write(rec)
 }
 
 
-
+if iconfig['log warnings']
+  log.close
+end
 
 
 

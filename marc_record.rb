@@ -11,6 +11,7 @@ module MARC
     attr_accessor :ac_action
     attr_accessor :overlay_point
     attr_accessor :ac_fields
+    attr_accessor :source_file
 
     # call-seq:
     #   rec.countf(tag) => integer
@@ -44,6 +45,7 @@ module MARC
       #  {'001' => '87654980'} (field on which overlay will happen, matching value)
       @overlay_point = []
       @ac_fields = []
+      @source_file # Path to file record is in
     end
 
     def <=>(another_record)
