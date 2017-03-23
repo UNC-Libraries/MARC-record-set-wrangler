@@ -63,16 +63,26 @@ institution:
   # Useful if your system can't handle matching on subsequent 019s for whatever reason
   manipulate 019 for overlay: true
 
-  # If true, MARC field will be added to every record expected to overlay, specifying whether overlay
-  #  is expected to be on main record ID or between existing:record ID and incoming:019
+  # If true, MARC field will be added to every record one of the following OVTYPE values:
+  #  - OVERLAY on (YOUR RECORD ID TAG)
+  #  - OVERLAY on 019
+  #  - NEW
   # If true, make sure to configure 'overlay type flag spec'
   flag overlay type: true
 
-  # What MARC field should the overlay type be written to?
+  # What MARC field should the overlay type be written to and how should it be written?
+  # [OVTYPE] will be replaced with one of the OVTYPE values specified above:
   overlay type flag spec:
     - tag: '999'
-      i1: '8'
-      i2: '8'
+      i1: '9'
+      i2: '9'
+      subfields:
+        -
+          - 'a'
+          - 'Overlay type'
+        -
+          - 'b'
+          - '[OVTYPE]'
 
   # If true, check each incoming record to determine whether it looks like it's a record for
   #  an e-resource
