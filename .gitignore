@@ -1,4 +1,7 @@
+\#*.*
+.\#*.*
 *.csv
 *.mrc
+*.fullmrc
 *.mrk
 *.txt
