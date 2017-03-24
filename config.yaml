@@ -148,8 +148,15 @@ institution:
 
   diff status flag spec:
     - tag: '999'
-      i1: '9'
-      i2: '9'
+      i1: '7'
+      i2: '7'
+      subfields:
+        -
+          - 'a'
+          - 'Diff status'
+        -
+          - 'b'
+          - '[DIFFTYPE]'
 
   # If you have both 'distinguish real updates' and 'distinguish true adds' = true, then the
   #  following categories of incoming records are going to be known at this point:

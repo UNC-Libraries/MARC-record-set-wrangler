@@ -242,6 +242,10 @@ in_mrc.each { |rec|
       end
     end
   end
+
+  if iconfig['flag diff status']
+    add_marc_var_fields_replacing_values(rec, iconfig['diff status flag spec'], [{'[DIFFTYPE]'=>rec.diff_status}])
+  end
   
   if iconfig['warn about non-e-resource records']
     if rec.is_e_rec? == 'no'
