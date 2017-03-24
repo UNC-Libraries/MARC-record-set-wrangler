@@ -12,6 +12,7 @@ module MARC
     attr_accessor :overlay_point
     attr_accessor :ac_fields
     attr_accessor :source_file
+    attr_accessor :diff_status
 
     # call-seq:
     #   rec.countf(tag) => integer
@@ -46,6 +47,7 @@ module MARC
       @overlay_point = []
       @ac_fields = []
       @source_file # Path to file record is in
+      @diff_status = ''
     end
 
     def <=>(another_record)

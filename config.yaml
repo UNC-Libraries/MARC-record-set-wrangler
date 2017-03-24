@@ -84,7 +84,6 @@ institution:
           - 'b'
           - '[OVTYPE]'
 
-
   # If true, a warning will be issued about non-e-resource records
   warn about non-e-resource records: true
 
@@ -116,10 +115,6 @@ institution:
   log warnings: true
       
   # If true, incoming records (new and update) will be compared to last-loaded file to determine
-  #  which incoming records should actually insert as new in your system
-  discern true adds: true
-
-  # If true, incoming records (new and update) will be compared to last-loaded file to determine
   #  - which incoming records should actually overlay in your system
   #  - if each incoming record that would overlay in your system has actually changed
   # This is helpful if you want to avoid re-loading a bunch of records that haven't actually
@@ -134,12 +129,17 @@ institution:
   # Must at least contain the 005 field. Otherwise, all records will always appear updated
   omit from comparison fields:
     - tag: '005'
+    - tag: '019'
+    - tag: '035'
     - tag: '598'
       field has: 'Reason for updated record:'
     - tag: '655'
       field has: 'Electronic book'
     - tag: '938'
     - tag: '994'
+    - tag: '999'
+
+  omit 040$d: true
 
   # If true, add a "diff status since last load" MARC field to incoming records
   # You will need to configure 'diff status flag spec'

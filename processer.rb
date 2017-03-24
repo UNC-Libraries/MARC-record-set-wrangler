@@ -191,6 +191,58 @@ in_mrc.each { |rec|
     add_marc_var_fields_replacing_values(rec, iconfig['overlay type flag spec'], [{'[OVTYPE]'=>ovtype}])
   end
 
+  def get_fields_by_spec(rec, spec)
+    fields = []
+    spec.each { |fspec|
+      tmpfields = rec.find_all { |flds| flds.tag =~ /#{fspec['tag']}/ }
+      if fspec.has_key?('i1')
+        tmpfields.keep_if { |f| f.indicator1 =~ /#{fspec['i1']}/ }
+      end
+      if fspec.has_key?('i2')
+        tmpfields.keep_if { |f| f.indicator2 =~ /#{fspec['i2']}/ }
+      end
+      if fspec.has_key?('field has')
+        tmpfields.keep_if { |f| f.to_s =~ /#{fspec['field has']}/i }
+      end
+      if fspec.has_key?('field does not have')
+        tmpfields.reject! { |f| f.to_s =~ /#{fspec['field does not have']}/i }
+      end
+      tmpfields.each { |f| fields << f }
+    }
+    return fields
+  end
+
+  def get_compare_fields(rec, spec, omit_040d)
+    to_omit = get_fields_by_spec(rec, spec)
+    to_compare = rec.reject { |f| to_omit.include?(f) }
+    compare = []
+    to_compare.each { |f|
+      f2s = f.to_s
+      if omit_040d
+        f2s.gsub!(/\$d.*$/, '') if f2s.start_with?('040')
+      end
+      compare << f2s
+    }
+    return compare.sort!
+  end
+  
+  if iconfig['distinguish real updates']
+    if rec.overlay_point.size > 0
+      omission_spec = iconfig['omit from comparison fields']
+      compnew = get_compare_fields(rec, omission_spec, iconfig['omit 040$d'])
+      old_rec_id = rec.overlay_point[0].values[0]
+      compold = get_compare_fields(ex_ids[old_rec_id], omission_spec, iconfig['omit 040$d'])
+      rec.changed_fields = compnew - compold
+      if rec.changed_fields.size > 0
+        rec.diff_status = 'CHANGE'
+      elsif rec.overlay_point.size == 0
+        rec.diff_status = 'NEW'
+      else
+        rec.diff_status = 'STATIC'
+      end
+    end
+  end
+  
   if iconfig['warn about non-e-resource records']
     if rec.is_e_rec? == 'no'
       rec.warnings << 'Not an e-resource record?'
@@ -199,12 +251,9 @@ in_mrc.each { |rec|
 
   if iconfig['warn about cat lang']
     catlangs = iconfig['cat lang']
-    puts catlangs.inspect
     reclang = rec.cat_lang
-    puts reclang
     unless catlangs.include?(reclang)
       rec.warnings << 'Not our language of cataloging'
-      puts "lang of cat problem!"
     end
   end
 
@@ -232,15 +281,12 @@ in_mrc.each { |rec|
   out_mrc.write(rec)
 }
 
+mynew = in_mrc.select { |r| r.diff_status == 'NEW' }
+mychange = in_mrc.select { |r| r.diff_status == 'CHANGE' }
+mystatic = in_mrc.select { |r| r.diff_status == 'STATIC' }
+
+puts "#{mynew.size} new -- #{mychange.size} change -- #{mystatic.size} static"
 
 if iconfig['log warnings']
   log.close
 end
-
-
-
-
-
-
-
-
