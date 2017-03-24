@@ -95,7 +95,6 @@ institution:
   # Set your acceptable language(s) of cataloging below. (One per line, starting with -)
   cat lang:
     - 'eng'
-    - 'fre'
 
   # If true, warnings about a MARC record will be written to a MARC field in that record
   # You must configure which field in 'warning flag spec' below

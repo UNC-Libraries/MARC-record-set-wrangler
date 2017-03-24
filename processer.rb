@@ -218,6 +218,16 @@ in_mrc.each { |rec|
       }
     end
   end
+
+  if iconfig['use id suffix']
+    unless suffix == ''
+      rec[idtag].value += suffix
+      if iconfig['overlay matchpoint includes 019']
+        f = rec['019']
+        f.subfields.each { |sf| sf.value += suffix } if f
+      end
+    end
+  end
   
   out_mrc.write(rec)
 }
