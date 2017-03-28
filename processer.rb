@@ -119,7 +119,7 @@ def get_fields_by_spec(rec, spec)
   return fields
 end
 
-def get_fields_for_comparison(rec, omitfspec, omitsfspec)
+def get_fields_for_comparison(rec, omitfspec, omitsfspec, type)
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
   sfomit = omitsfspec
@@ -137,22 +137,21 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec)
                 newsf = MARC::Subfield.new("#{sf.code}", "#{sf.value}")
                 newfield.append(newsf)
               end
-              compare << newfield
             }
+            compare << newfield.to_s
           else
-            compare << f
+            compare << f.to_s
           end
         }
       else
-        compare << f
+        compare << f.to_s
       end
     else
-      compare << f
-    end
+      compare << f.to_s
+    end 
 
   }
-#  compare.sort!
-  puts compare.inspect
+  compare.sort!
   return compare
 end
 
@@ -282,9 +281,9 @@ in_mrc.each { |rec|
       if rec.overlay_point.size > 0
         omission_spec = thisconfig['omit from comparison fields']
         omission_spec_sf = thisconfig['omit from comparison subfields']
-        compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf)
+        compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf, 'new')
         old_rec_id = rec.overlay_point[0].values[0]
-        compold = get_fields_for_comparison(ex_ids[old_rec_id], omission_spec, omission_spec_sf)
+        compold = get_fields_for_comparison(ex_ids[old_rec_id], omission_spec, omission_spec_sf, 'existing')
         rec.changed_fields = compnew - compold
         if rec.changed_fields.size > 0
           rec.diff_status = 'CHANGE'
