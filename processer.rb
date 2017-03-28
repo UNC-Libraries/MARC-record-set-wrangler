@@ -130,14 +130,20 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec)
         omitsfspec.each { |ef| #edit field
           tag_w_sf_omissions = ef.keys[0]
           if f.tag == tag_w_sf_omissions
-            sfs_in_field = f.codes
+            newfield = MARC::DataField.new("#{f.tag}", "#{f.indicator1}", "#{f.indicator2}")
             sfs_to_omit = ef.values[0].chars
-            puts sfs_to_omit.inspect
-            puts "will work on sf omissions for #{tag_w_sf_omissions}."
+            f.subfields.each { |sf|
+              unless sfs_to_omit.include?(sf.code)
+                newsf = MARC::Subfield.new("#{sf.code}", "#{sf.value}")
+                newfield.append(newsf)
+              end
+              compare << newfield
+            }
+          else
+            compare << f
           end
         }
       else
-        puts "not doing sf omissions"
         compare << f
       end
     else
@@ -145,7 +151,9 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec)
     end
 
   }
-  return compare.sort!
+#  compare.sort!
+  puts compare.inspect
+  return compare
 end
 
 def get_019_matches(rec, the_idtag, ex_id_list)
