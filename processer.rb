@@ -52,7 +52,6 @@ end
 thisconfig = iconfig.dup
 thisconfig = merge_configs(thisconfig, wconfig)
 thisconfig = merge_configs(thisconfig, cconfig)
-pp(thisconfig)
 
 # set the idtag for easy access in rest of script
 idtag = thisconfig['record id']['tag']
@@ -310,14 +309,16 @@ in_mrc.each { |rec|
         rec.changed_fields = compnew - compold
         if rec.changed_fields.size > 0
           rec.diff_status = 'CHANGE'
-        elsif rec.overlay_point.size == 0
-          rec.diff_status = 'NEW'
         else
           rec.diff_status = 'STATIC'
         end
+      else
+          rec.diff_status = 'NEW'
       end
     end
 
+    puts "#{rec._001} - #{rec.overlay_point.size} - #{rec.diff_status}"
+    
     if thisconfig['flag rec status']
       add_marc_var_fields_replacing_values(rec, thisconfig['rec status flag spec'], [{'[RECORDSTATUS]'=>rec.diff_status}])
     end
@@ -387,8 +388,6 @@ in_mrc.each { |rec|
     end
   end
 
-
-    
   if thisconfig['write warnings to recs']
     if rec.warnings.size > 0
       rec.warnings.each { |w|
@@ -436,6 +435,29 @@ in_mrc.each { |rec|
   end
 }
 
+if thisconfig['produce delete file']
+  deletes = ex_ids.keep_if { |recid, rec| rec.overlay_point.size == 0 }
+  if deletes.size > 0
+    dwriter = MARC::Writer.new("#{out_dir}/#{filestem}_deletes.mrc")
+    deletes.each_value { |rec|
+      if thisconfig['use id affix']
+        myfix = thisconfig['id affix value']
+        unless myfix == ''
+          if thisconfig['affix type'] == 'suffix'
+            rec[idtag].value += myfix
+          elsif thisconfig['affix type'] == 'prefix'
+            rec[idtag].value = myfix + rec[idtag].value
+          else
+            raise ArgumentError, "'affix type' option in config.yaml must be either 'prefix' or 'suffix'" 
+          end
+        end
+      end
+      dwriter.write(rec)
+    }
+    dwriter.close
+  end
+end
+
 if thisconfig['report record status counts on screen']
   puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
   puts "Record status counts"
@@ -456,4 +478,4 @@ if thisconfig['incoming record output files']
   writer_list.each { |w| writers[w].close }
 else
   out_mrc.close
-end
+end 

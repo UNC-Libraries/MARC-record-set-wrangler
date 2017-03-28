@@ -286,8 +286,8 @@ workflows:
     #  Assigning the same affix to all three would cause them to all be written to the same file.
     incoming record output files:
       CHANGE: '_change'
-      STATIC: 'do not output'
-      ADD: '_add'
+      STATIC: '_static'
+      NEW: '_add'
   
     # If true, use comparison of incoming and last-loaded files to produce a file of deletes
     # This file will contain all records from last-loaded file that will not be overlaid
