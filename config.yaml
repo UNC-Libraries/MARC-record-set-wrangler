@@ -246,6 +246,9 @@ workflows:
     # If this is true, you must configure 'omit from comparison fields' to include
     #  at least the 005 field, which will be different in each record set delivered
     set record status by file diff: true
+
+    # See count of how many records are tagged with each status at the end of processing
+    report record status counts on screen: true
   
     # Tells which MARC fields/subfields to ignore when determining whether a record has
     # changed since you last loaded it.

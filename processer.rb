@@ -403,11 +403,16 @@ in_mrc.each { |rec|
   end
 }
 
-mynew = in_mrc.select { |r| r.diff_status == 'NEW' }
-mychange = in_mrc.select { |r| r.diff_status == 'CHANGE' }
-mystatic = in_mrc.select { |r| r.diff_status == 'STATIC' }
+if thisconfig['report record status counts on screen']
+  puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  puts "Record status counts"
+  puts "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  mynew = in_mrc.select { |r| r.diff_status == 'NEW' }
+  mychange = in_mrc.select { |r| r.diff_status == 'CHANGE' }
+  mystatic = in_mrc.select { |r| r.diff_status == 'STATIC' }
 
-puts "#{mynew.size} new -- #{mychange.size} change -- #{mystatic.size} static"
+  puts "#{mynew.size} new -- #{mychange.size} change -- #{mystatic.size} static"
+end
 
 if thisconfig['log warnings']
   log.close
