@@ -63,7 +63,15 @@ ex_dir = 'last_processed_marc_ORIG'
 out_dir = 'output'
 
 # Set up MARC writers
-out_mrc = MARC::Writer.new("#{out_dir}/output.mrc")
+Dir.chdir(in_dir)
+filestem = Dir.glob('*.mrc')[0].gsub!(/\.mrc/, '')
+Dir.chdir('..')
+writers = {}
+writeconfig = thisconfig['incoming record output files'].delete_if { |k, v| v == 'do not output' }
+unless writeconfig
+  writers['default'] = MARC::Writer.new("#{out_dir}/#{filestem}_output.mrc")
+  out_mrc = writers['default']
+end
 
 # Set up logging, if specified
 if thisconfig['log warnings']
@@ -119,7 +127,7 @@ def get_fields_by_spec(rec, spec)
   return fields
 end
 
-def get_fields_for_comparison(rec, omitfspec, omitsfspec, type)
+def get_fields_for_comparison(rec, omitfspec, omitsfspec)
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
   sfomit = omitsfspec
@@ -130,29 +138,31 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec, type)
         omitsfspec.each { |ef| #edit field
           tag_w_sf_omissions = ef.keys[0]
           if f.tag == tag_w_sf_omissions
-            newfield = MARC::DataField.new("#{f.tag}", "#{f.indicator1}", "#{f.indicator2}")
+            newfield = MARC::DataField.new(f.tag, f.indicator1, f.indicator2)
             sfs_to_omit = ef.values[0].chars
             f.subfields.each { |sf|
               unless sfs_to_omit.include?(sf.code)
-                newsf = MARC::Subfield.new("#{sf.code}", "#{sf.value}")
+                newsf = MARC::Subfield.new(sf.code, sf.value)
                 newfield.append(newsf)
               end
             }
-            compare << newfield.to_s
+            compare << newfield
           else
-            compare << f.to_s
+            compare << f
           end
         }
       else
-        compare << f.to_s
+        compare << f
       end
     else
-      compare << f.to_s
+      compare << f
     end 
 
   }
-  compare.sort!
-  return compare
+  compare_strings = []
+  compare.each { |f| compare_strings << f.to_s }
+  compare_strings.sort!
+  return compare_strings
 end
 
 def get_019_matches(rec, the_idtag, ex_id_list)
@@ -191,6 +201,18 @@ def put_matching_019_sf_first(rec)
     nomatch019.each { |e| newfield.append(MARC::Subfield.new('a', e)) }
   end
   rec.append(newfield)
+end
+
+def add_marc_var_fields(rec, fspec)
+  fspec.each { |fs|
+    sfval = ''
+    f = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
+    fs['subfields'].each { |sfs|
+      sf = MARC::Subfield.new(sfs['delimiter'], sfs['value'])
+      f.append(sf)
+    }
+    rec.append(f)
+  }
 end
 
 def add_marc_var_fields_replacing_values(rec, fspec, replaces)
@@ -281,9 +303,9 @@ in_mrc.each { |rec|
       if rec.overlay_point.size > 0
         omission_spec = thisconfig['omit from comparison fields']
         omission_spec_sf = thisconfig['omit from comparison subfields']
-        compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf, 'new')
+        compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf)
         old_rec_id = rec.overlay_point[0].values[0]
-        compold = get_fields_for_comparison(ex_ids[old_rec_id], omission_spec, omission_spec_sf, 'existing')
+        compold = get_fields_for_comparison(ex_ids[old_rec_id], omission_spec, omission_spec_sf)
         rec.changed_fields = compnew - compold
         if rec.changed_fields.size > 0
           rec.diff_status = 'CHANGE'
@@ -295,11 +317,31 @@ in_mrc.each { |rec|
       end
     end
 
-    if thisconfig['flag diff status']
-      add_marc_var_fields_replacing_values(rec, thisconfig['diff status flag spec'], [{'[DIFFTYPE]'=>rec.diff_status}])
+    if thisconfig['flag rec status']
+      add_marc_var_fields_replacing_values(rec, thisconfig['rec status flag spec'], [{'[RECORDSTATUS]'=>rec.diff_status}])
     end
   end
-  
+
+  if thisconfig['flag AC recs with changed headings']
+    if rec.overlay_point.size > 0
+      ac_spec = thisconfig['fields under AC']
+      ac_spec_omit_sfs = thisconfig['omit from AC fields subfields']
+      ac_new = get_fields_by_spec(rec, ac_spec).map { |f| f.to_s }
+      old_rec_id = rec.overlay_point[0].values[0]
+      ac_old = get_fields_by_spec(ex_ids[old_rec_id], ac_spec).map { |f| f.to_s }
+      ac_new.sort!
+      ac_old.sort!
+      rec.changed_ac_fields = ac_new - ac_old
+      if rec.changed_ac_fields.size > 0
+        if thisconfig['changed heading MARC spec']
+          add_marc_var_fields(rec, thisconfig['changed heading MARC spec'])
+        else
+          raise StandardError, "You need to define 'changed heading MARC spec' in config" 
+        end
+      end
+    end
+  end
+
   if thisconfig['warn about non-e-resource records']
     if rec.is_e_rec? == 'no'
       rec.warnings << 'Not an e-resource record?'
@@ -345,8 +387,20 @@ in_mrc.each { |rec|
       end
     end
   end
-  
-  out_mrc.write(rec)
+
+  if thisconfig['incoming record output files']
+    status = rec.diff_status
+    if writers.has_key?(status)
+      writers[status].write(rec)
+    elsif writeconfig.has_key?(status)
+      writers[status] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
+      writers[status].write(rec)
+    else
+      next
+    end
+  else
+    out_mrc.write(rec)
+  end
 }
 
 mynew = in_mrc.select { |r| r.diff_status == 'NEW' }
@@ -357,4 +411,11 @@ puts "#{mynew.size} new -- #{mychange.size} change -- #{mystatic.size} static"
 
 if thisconfig['log warnings']
   log.close
+end
+
+if thisconfig['incoming record output files']
+  writer_list = writers.keys
+  writer_list.each { |w| writers[w].close }
+else
+  out_mrc.close
 end

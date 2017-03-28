@@ -7,6 +7,7 @@ module MARC
     include Comparable
     attr_accessor :warnings
     attr_accessor :changed_fields
+    attr_accessor :changed_ac_fields
     attr_accessor :elvl_ac
     attr_accessor :ac_action
     attr_accessor :overlay_point
@@ -37,6 +38,7 @@ module MARC
       @leader[10..11] = '22'
       @leader[20..23] = '4500'
       @warnings = []
+      @changed_ac_fields = []
       @changed_fields = []
       @ac_action = nil
       @elvl_ac = false
