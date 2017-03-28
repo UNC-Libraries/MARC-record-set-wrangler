@@ -248,6 +248,7 @@ workflows:
     set record status by file diff: true
 
     # See count of how many records are tagged with each status at the end of processing
+    # Requres 'set record status by file diff' to be true
     report record status counts on screen: true
   
     # Tells which MARC fields/subfields to ignore when determining whether a record has
@@ -287,7 +288,6 @@ workflows:
       CHANGE: '_change'
       STATIC: 'do not output'
       ADD: '_add'
-      NA: 'do not output'
   
     # If true, use comparison of incoming and last-loaded files to produce a file of deletes
     # This file will contain all records from last-loaded file that will not be overlaid
@@ -300,7 +300,7 @@ workflows:
     elvl sets AC status: true
       
     # If true, you must specify what field(s) you want added to records under AC
-    add AC MARC fields: true
+    add AC MARC fields: false
                 
     # If true, you must specify what field(s) you want added to records NOT under AC
     add noAC MARC fields: true
@@ -320,6 +320,8 @@ workflows:
     id affix value: 'wcm'
     overlay matchpoint includes 019: false
     manipulate 019 for overlay: false
+    set record status by file diff: false
+    report record status counts on screen: false
     flag overlay type: false
     warn about non-e-resource records: true
     warn about cat lang: true
@@ -340,14 +342,13 @@ workflows:
     #  - tag: '994'
     #  - tag: '999'
     flag rec status: false
-    incoming record output files:
-      CHANGE: 'do not output'
-      STATIC: 'do not output'
-      ADD: 'do not output'
-      NA: '_whole'
+    #incoming record output files:
+    #  CHANGE: 'do not output'
+    #  STATIC: 'do not output'
+    #  ADD: 'do not output'
     produce delete file: false
     elvl sets AC status: true
-    add AC MARC fields: true
+    add AC MARC fields: false
     add noAC MARC fields: true
     flag AC recs with changed headings: false
 

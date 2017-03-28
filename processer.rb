@@ -67,8 +67,9 @@ Dir.chdir(in_dir)
 filestem = Dir.glob('*.mrc')[0].gsub!(/\.mrc/, '')
 Dir.chdir('..')
 writers = {}
-writeconfig = thisconfig['incoming record output files'].delete_if { |k, v| v == 'do not output' }
-unless writeconfig
+if thisconfig['incoming record output files']
+  writeconfig = thisconfig['incoming record output files'].delete_if { |k, v| v == 'do not output' }
+else
   writers['default'] = MARC::Writer.new("#{out_dir}/#{filestem}_output.mrc")
   out_mrc = writers['default']
 end
@@ -356,6 +357,38 @@ in_mrc.each { |rec|
     end
   end
 
+  if thisconfig['elvl sets AC status']
+    elvl = rec.encoding_level
+    ac_map = thisconfig['elvl AC map']
+    if ac_map
+      rec.ac_action = ac_map[elvl]
+    else
+      raise ArgumentError, "Please configure 'elvl AC map' in config.yaml"
+    end
+
+    if rec.ac_action == 'AC'
+      if thisconfig['add AC MARC fields']
+        if thisconfig['add AC MARC spec']
+          add_marc_var_fields(rec, thisconfig['add AC MARC spec'])
+        else
+          raise ArgumentError, "Please configure 'add AC MARC spec' in config.yaml"
+        end
+      end
+    end
+
+    if rec.ac_action == 'noAC'
+      if thisconfig['add noAC MARC fields']
+        if thisconfig['add noAC MARC spec']
+          add_marc_var_fields(rec, thisconfig['add noAC MARC spec'])
+        else
+          raise ArgumentError, "Please configure 'add noAC MARC spec' in config.yaml"
+        end
+      end
+    end
+  end
+
+
+    
   if thisconfig['write warnings to recs']
     if rec.warnings.size > 0
       rec.warnings.each { |w|
