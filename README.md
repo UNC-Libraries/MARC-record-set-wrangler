@@ -18,7 +18,7 @@ Based on options you can set at the institution, workflow, or collection level, 
 - Generate a deletes file from the previous record set
   - This will contain any records from the previous set that will not be overlaid by records in the incoming set
   - Your specified prefixes/suffixes will be added to specified IDs in delete file
-- Determine whether *authority controlled heading fields* in incoming records have changed
+- Determine whether **authority controlled heading fields** in incoming records have changed
   - Fields to be treated as authority controlled headings can be flexibly specified
   - You specify a MARC field to be added to incoming records where the headings have changed
 - Decide whether a record will be put under authority control based on its LDR/17 Encoding Level value
