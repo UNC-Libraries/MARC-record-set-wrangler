@@ -92,16 +92,23 @@ institution:
       subfields:
         - delimiter: 'a'
           value: 'LTIEXP'
-
+          
 workflows:
   WCM - routine update using most recent whole file + last whole file:
-    clean ids: true
+    clean ids:
+      - find: '^o(c[mn]|n)'
+        replace: ''
+      - find: ' *$'
+        replace: ''
+      - find: '\\$'
+        replace: ''
     use id affix: true
     affix type: 'suffix'
     id affix value: 'wcm'
     use existing record set: true
     overlay matchpoint includes 019: true
     manipulate 019 for overlay: true
+    flag overlay type: true
     warn about non-e-resource records: true
     warn about cat lang: true
     write warnings to recs: true
@@ -126,7 +133,7 @@ workflows:
     flag rec status: true
     incoming record output files:
       CHANGE: '_change'
-      STATIC: '_static'
+      STATIC: 'do not output'
       NEW: '_add'
     produce delete file: true
     report delete count on screen: true
@@ -136,7 +143,13 @@ workflows:
     flag AC recs with changed headings: true
 
   WCM - whole file - new or fresh reload:
-    clean ids: true
+    clean ids:
+      - find: '^o(c[mn]|n)'
+        replace: ''
+      - find: ' *$'
+        replace: ''
+      - find: '\\$'
+        replace: ''
     use id affix: true
     affix type: 'suffix'
     id affix value: 'wcm'

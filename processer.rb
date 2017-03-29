@@ -100,10 +100,12 @@ def get_recs(dir, label)
   end
 end
 
-def clean_id(rec, tag)
+def clean_id(rec, tag, spec)
   id = rec[tag].value
-  newid = id.gsub(/^(oc[mn]|on)/, '').gsub(/ *$/, '').gsub(/\\$/, '')
-  rec[tag].value = newid
+  spec.each { |fr|
+    id.gsub!(/#{fr['find']}/, fr['replace'])
+  }
+  rec[tag].value = id
   return rec
 end
 
@@ -221,7 +223,7 @@ def add_marc_var_fields_replacing_values(rec, fspec, replaces)
     sfval = ''
     f = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
     fs['subfields'].each { |sfs|
-      sfval = sfs[1].dup
+      sfval = sfs['value'].dup
       if replaces.size > 0
         replaces.each { |findrep|
           findrep.each_pair { |fnd, rep|
@@ -229,7 +231,7 @@ def add_marc_var_fields_replacing_values(rec, fspec, replaces)
           }
         }
       end
-      sf = MARC::Subfield.new(sfs[0], sfval)
+      sf = MARC::Subfield.new(sfs['delimiter'], sfval)
       f.append(sf)
     }
     rec.append(f)
@@ -258,14 +260,14 @@ if thisconfig['use existing record set']
   ex_ids = {}
 
   ex_mrc.each { |rec|
-    clean_id(rec, idtag) if thisconfig['clean ids']
+    clean_id(rec, idtag, thisconfig['clean ids']) if thisconfig['clean ids']
     ex_ids[rec[idtag].value] = rec
   }
 end
 
 # Process incoming records
 in_mrc.each { |rec|
-  clean_id(rec, idtag) if thisconfig['clean ids']
+  clean_id(rec, idtag, thisconfig['clean ids']) if thisconfig['clean ids']
 
   if thisconfig['use existing record set']
     # Set record.overlay_point of incoming record to idtag info if there's a match on main record id
