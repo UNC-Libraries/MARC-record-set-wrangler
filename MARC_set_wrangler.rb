@@ -430,24 +430,37 @@ in_mrc.each { |rec|
     end
   end
 
+  def add_affix(value, affix, type)
+    if type == 'suffix'
+      value = value + affix
+    elsif type == 'prefix'
+      value = affix + value
+    else
+      raise ArgumentError, "'affix type' option in config.yaml must be either 'prefix' or 'suffix'"
+    end
+    return value
+  end
+
   if thisconfig['use id affix']
     myfix = thisconfig['id affix value']
     unless myfix == ''
-      if thisconfig['affix type'] == 'suffix'
-        rec[idtag].value += myfix
-        if thisconfig['overlay matchpoint includes 019']
-          f = rec['019']
-          f.subfields.each { |sf| sf.value += myfix } if f
-        end
-      elsif thisconfig['affix type'] == 'prefix'
-        rec[idtag].value = myfix + rec[idtag].value
-        if thisconfig['overlay matchpoint includes 019']
-          f = rec['019']
-          f.subfields.each { |sf| sf.value = myfix + sf.value } if f
-        end
-      else
-        raise ArgumentError, "'affix type' option in config.yaml must be either 'prefix' or 'suffix'" 
-      end
+      idfields.each { |fspec|
+        ftag = fspec[0,3]
+        sfd = fspec[3] if fspec.size > 3
+        rec.find_all { |fld| fld.tag == ftag }.each { |fld|
+          
+          fclass = fld.class.name
+          if fclass == 'MARC::ControlField'
+            fld.value = add_affix(fld.value, myfix, thisconfig['affix type'])
+          elsif fclass == 'MARC::DataField'
+            fld.subfields.each { |sf|
+              if sf.code == sfd
+                sf.value = add_affix(sf.value, myfix, thisconfig['affix type'])
+              end
+            } 
+          end
+      }
+      }
     end
   end
 
