@@ -55,7 +55,7 @@ thisconfig = merge_configs(thisconfig, cconfig)
 #pp(thisconfig)
 
 # set the idtag for easy access in rest of script
-idtag = thisconfig['record id']['tag']
+idtag = '001'
 
 # Set up in/out directories
 in_dir = 'incoming_marc'
@@ -100,12 +100,33 @@ def get_recs(dir, label)
   end
 end
 
-def clean_id(rec, tag, spec)
-  id = rec[tag].value
-  spec.each { |fr|
-    id.gsub!(/#{fr['find']}/, fr['replace'])
+def clean_id(rec, idfields, spec)
+  idfields.each { |fspec|
+    ftag = fspec[0,3]
+    sfd = fspec[3] if fspec.size > 3
+    recfields = rec.find_all { |fld| fld.tag == ftag }
+     if recfields.size > 0
+      recfields.each { |fld|
+        fclass = fld.class.name
+         if fclass == 'MARC::ControlField'
+          id = fld.value
+           spec.each { |fr|
+            id.gsub!(/#{fr['find']}/, fr['replace'])
+           }
+         elsif fclass == 'MARC::DataField'
+           fld.subfields.each { |sf|
+             if sf.code == sfd
+               id = sf.value
+               spec.each { |fr|
+                 id.gsub!(/#{fr['find']}/, fr['replace'])
+               }
+             end
+           }
+        else
+        end
+      }
+    end
   }
-  rec[tag].value = id
   return rec
 end
 
@@ -242,9 +263,14 @@ end
 in_mrc = get_recs(in_dir, 'incoming')
 ex_mrc = get_recs(ex_dir, 'existing') if thisconfig['use existing record set']
 
+
 # Set affix if it's going to be used, otherwise it is blank string
 if thisconfig['use id affix']
-  puts "\n\nID #{thisconfig['affix type']} I will use is: #{thisconfig['id affix value']}"
+  #get fields we'll add affix to
+  idfields = []
+  idfields << thisconfig['main id']
+  idfields << thisconfig['merge id'] if thisconfig['merge id']
+  puts "\n\nThe #{thisconfig['affix type']} #{thisconfig['id affix value']} will be added to #{idfields.join(', ')}."
 end
 # NOTE: Since we are comparing original files below, we don't need to add id suffixes
 #  until we output the processed records.
@@ -260,14 +286,14 @@ if thisconfig['use existing record set']
   ex_ids = {}
 
   ex_mrc.each { |rec|
-    clean_id(rec, idtag, thisconfig['clean ids']) if thisconfig['clean ids']
+    clean_id(rec, idfields, thisconfig['clean ids']) if thisconfig['clean ids']
     ex_ids[rec[idtag].value] = rec
   }
 end
 
 # Process incoming records
 in_mrc.each { |rec|
-  clean_id(rec, idtag, thisconfig['clean ids']) if thisconfig['clean ids']
+  clean_id(rec, idfields, thisconfig['clean ids']) if thisconfig['clean ids']
 
   if thisconfig['use existing record set']
     # Set record.overlay_point of incoming record to idtag info if there's a match on main record id

@@ -1,7 +1,7 @@
 ---
 institution: 
-  record id: 
-    tag: '001'
+  main id: '001'
+  merge id: '035z'
   cat lang:
     - 'eng'
   overlay type flag spec:
@@ -101,6 +101,8 @@ workflows:
       - find: ' *$'
         replace: ''
       - find: '\\$'
+        replace: ''
+      - find: '\(OCoLC\)'
         replace: ''
     use id affix: true
     affix type: 'suffix'
