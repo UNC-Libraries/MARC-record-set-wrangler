@@ -10,6 +10,7 @@ Based on options you can set at the institution, workflow, or collection level, 
 - Determine whether incoming records will overlay records in previous set
   - Match on just main ID (001/035$a value) OR on merged record IDs (019$a/035$z values)
   - Optionally add a MARC field to incoming records specifying which field the match is made on (main or merge)
+- Manipulate the order of subfields in 019 to make sure overlay/match point is first
 - Determine whether incoming records that will overlay have actually changed or not
   - Fields/subfields to ignore in this comparison can be flexibly specified
 - Split incoming records into separate files based on comparison with previous file
