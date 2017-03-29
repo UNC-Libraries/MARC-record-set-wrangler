@@ -3,5 +3,6 @@
 *.csv
 *.mrc
 *.fullmrc
+*.fmrc
 *.mrk
 *.txt
