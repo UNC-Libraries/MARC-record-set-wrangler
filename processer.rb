@@ -52,6 +52,7 @@ end
 thisconfig = iconfig.dup
 thisconfig = merge_configs(thisconfig, wconfig)
 thisconfig = merge_configs(thisconfig, cconfig)
+#pp(thisconfig)
 
 # set the idtag for easy access in rest of script
 idtag = thisconfig['record id']['tag']
@@ -316,8 +317,6 @@ in_mrc.each { |rec|
           rec.diff_status = 'NEW'
       end
     end
-
-    puts "#{rec._001} - #{rec.overlay_point.size} - #{rec.diff_status}"
     
     if thisconfig['flag rec status']
       add_marc_var_fields_replacing_values(rec, thisconfig['rec status flag spec'], [{'[RECORDSTATUS]'=>rec.diff_status}])
@@ -388,6 +387,10 @@ in_mrc.each { |rec|
     end
   end
 
+  if thisconfig['add MARC field spec']
+    add_marc_var_fields(rec, thisconfig['add MARC field spec'])
+  end
+
   if thisconfig['write warnings to recs']
     if rec.warnings.size > 0
       rec.warnings.each { |w|
@@ -435,6 +438,16 @@ in_mrc.each { |rec|
   end
 }
 
+if thisconfig['report record status counts on screen']
+  puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  puts "Record status counts"
+  puts "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  mynew = in_mrc.select { |r| r.diff_status == 'NEW' }
+  mychange = in_mrc.select { |r| r.diff_status == 'CHANGE' }
+  mystatic = in_mrc.select { |r| r.diff_status == 'STATIC' }
+  puts "#{mynew.size} new -- #{mychange.size} change -- #{mystatic.size} static"
+end
+
 if thisconfig['produce delete file']
   deletes = ex_ids.keep_if { |recid, rec| rec.overlay_point.size == 0 }
   if deletes.size > 0
@@ -456,17 +469,7 @@ if thisconfig['produce delete file']
     }
     dwriter.close
   end
-end
-
-if thisconfig['report record status counts on screen']
-  puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-  puts "Record status counts"
-  puts "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-  mynew = in_mrc.select { |r| r.diff_status == 'NEW' }
-  mychange = in_mrc.select { |r| r.diff_status == 'CHANGE' }
-  mystatic = in_mrc.select { |r| r.diff_status == 'STATIC' }
-
-  puts "#{mynew.size} new -- #{mychange.size} change -- #{mystatic.size} static"
+  puts "#{deletes.size} delete" if thisconfig['report delete count on screen']
 end
 
 if thisconfig['log warnings']
@@ -479,3 +482,5 @@ if thisconfig['incoming record output files']
 else
   out_mrc.close
 end 
+
+puts "\nDone!\n\n"
