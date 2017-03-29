@@ -26,3 +26,6 @@ Based on options you can set at the institution, workflow, or collection level, 
   - You specify what should be added to each incoming record to indicate whether it should be under authority control or not
 - Add specified MARC field(s) to all incoming records
   - Set at the workflow or collection level... or both
+
+For more information about configuring and using this tool:
+- See this [project's wiki](https://github.com/UNC-Libraries/MARC-record-set-wrangler/wiki)
