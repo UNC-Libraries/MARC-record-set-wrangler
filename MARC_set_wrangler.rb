@@ -76,7 +76,7 @@ end
 
 # Set up logging, if specified
 if thisconfig['log warnings']
-  log = CSV.open("#{out_dir}/log.csv", "wb")
+  log = CSV.open("#{out_dir}/#{filestem}_log.csv", "wb")
   log << ['filename', 'rec id', 'warning']
 end
 
@@ -515,6 +515,9 @@ end
 
 if thisconfig['log warnings']
   log.close
+  logname = "#{out_dir}/#{filestem}_log.csv"
+  line_count = `wc -l "#{logname}"`.strip.split(' ')[0].to_i
+  File.delete(logname) if line_count == 1
 end
 
 if thisconfig['incoming record output files']
