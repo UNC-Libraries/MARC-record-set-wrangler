@@ -1,7 +1,8 @@
 ---
 institution: 
+  show combined config: false
   main id: '001'
-  merge id: '035z'
+  merge id: '019a'
   cat lang:
     - 'eng'
   overlay type flag spec:
@@ -95,54 +96,52 @@ institution:
           
 workflows:
   WCM - routine update using most recent whole file + last whole file:
-    clean ids:
-      - find: '^o(c[mn]|n)'
-        replace: ''
-      - find: ' *$'
-        replace: ''
-      - find: '\\$'
-        replace: ''
-      - find: '\(OCoLC\)'
-        replace: ''
-    use id affix: true
-    affix type: 'suffix'
-    id affix value: 'wcm'
+    #clean ids:
+    #  - find: '^o(c[mn]|n)'
+    #    replace: ''
+    #  - find: ' *$'
+    #    replace: ''
+    #  - find: '\\$'
+    #    replace: ''
+    #use id affix: true
+    #affix type: 'suffix'
+    #id affix value: 'wcm'
     use existing record set: true
-    overlay matchpoint includes 019: true
+    overlay merged records: true
     manipulate 019 for overlay: true
     flag overlay type: true
-    warn about non-e-resource records: true
-    warn about cat lang: true
-    write warnings to recs: true
-    log warnings: true
-    set record status by file diff: true
-    report record status counts on screen: true
-    omit from comparison fields:
-      - tag: '005'
-      - tag: '019'
-      - tag: '035'
-      - tag: '598'
-        field has: 'Reason for updated record:'
-      - tag: '655'
-        field has: 'Electronic book'
-      - tag: '773'
-        field has: '\(online collection\)'
-      - tag: '938'
-      - tag: '994'
-      - tag: '999'
-    omit from comparison subfields:
-      - '040': 'cd'
-    flag rec status: true
-    incoming record output files:
-      CHANGE: '_change'
-      STATIC: 'do not output'
-      NEW: '_add'
-    produce delete file: true
-    report delete count on screen: true
-    elvl sets AC status: true
-    add AC MARC fields: false
-    add noAC MARC fields: true
-    flag AC recs with changed headings: true
+    #set record status by file diff: true
+    #report record status counts on screen: true
+    #omit from comparison fields:
+    #  - tag: '005'
+    #  - tag: '019'
+    #  - tag: '035'
+    #  - tag: '598'
+    #    field has: 'Reason for updated record:'
+    #  - tag: '655'
+    #    field has: 'Electronic book'
+    #  - tag: '773'
+    #    field has: '\(online collection\)'
+    #  - tag: '938'
+    #  - tag: '994'
+    #  - tag: '999'
+    #omit from comparison subfields:
+    #  '040': 'cd'
+    #flag rec status: true
+    #incoming record output files:
+    #  CHANGE: '_change'
+    #  STATIC: '_static'
+    #  NEW: '_add'
+    #produce delete file: true
+    #report delete count on screen: true
+    #elvl sets AC status: true
+    #add AC MARC fields: false
+    #add noAC MARC fields: true
+    #flag AC recs with changed headings: true
+    #warn about non-e-resource records: true
+    #warn about cat lang: true
+    #write warnings to recs: true
+    #log warnings: true
 
   WCM - whole file - new or fresh reload:
     clean ids:
@@ -152,10 +151,10 @@ workflows:
         replace: ''
       - find: '\\$'
         replace: ''
-    use id affix: true
+    #use id affix: true
     affix type: 'suffix'
     id affix value: 'wcm'
-    overlay matchpoint includes 019: false
+    overlay merged records: false
     manipulate 019 for overlay: false
     set record status by file diff: false
     report record status counts on screen: false
@@ -179,7 +178,7 @@ workflows:
     #  - tag: '994'
     #  - tag: '999'
     #omit from comparison subfields:
-    #  - '040': 'cd'
+    #  '040': 'cd'
     flag rec status: false
     #incoming record output files:
     #  CHANGE: '_change'
@@ -190,6 +189,80 @@ workflows:
     add AC MARC fields: false
     add noAC MARC fields: true
     flag AC recs with changed headings: false
+
+  WCM - routine update using most recent whole file + current ILS set:
+    clean ids:
+      - find: '^o(c[mn]|n)'
+        replace: ''
+      - find: ' *$'
+        replace: ''
+      - find: '\\$'
+        replace: ''
+      - find: '(\d+)[a-z]+\d*$'
+        replace: '\1'
+    use id affix: true
+    affix type: 'suffix'
+    id affix value: 'wcm'
+    use existing record set: true
+    overlay merged records: true
+    manipulate 019 for overlay: true
+    flag overlay type: true
+    warn about non-e-resource records: true
+    warn about cat lang: true
+    write warnings to recs: true
+    log warnings: true
+    set record status by file diff: true
+    report record status counts on screen: true
+    omit from comparison fields:
+      - tag: '00[5678]'
+      - tag: '019'
+      - tag: '0(2[049]|3[57]|49|55|7[02]|84|9[06])'
+      - tag: '060'
+        field has: 'online book'
+      - tag: '082'
+        i1: ' '
+      - tag: '256'
+      - tag: '366'
+      - tag: '5(0[56]|16|3[038]|8[38]|90)'
+      - tag: '520'
+      - tag: '598'
+        field has: 'Reason for updated record:'
+      - tag: '6..'
+        i2: '7'
+      - tag: '653'
+      - tag: '655'
+        field has: '(Electronic (book|reference source)|e-?book|Drama|downloadable)'
+      - tag: '710'
+        field has: '(ebrary|EBL|Springer|Adam Matthew|Gale Group|Books24x7|ebooks)'
+      - tag: '710'
+        field has: '(American Chemical Society|CIAO \(Org|Columbia University\. \$b Press|de Gruyter|European Mathematical Society|GeoScienceWorld|Wiley InterScience|Royal Society of Chemistry|Chemical Society \(Great Britain\)|ScienceDirect|Elsevier|Society of Photo-optical Instrumentation Engineers)'
+      - tag: '710'
+        field has: '\$a American Mathematical Society\. *$'
+      - tag: '773'
+        field has: '(\(online collection\)|OCLC WorldShare Collection Manager|ACLS Humanities E-Book)'
+      - tag: '773'
+        field has: '\$t (EBL|Springer eBooks) *$'
+      - tag: '797'
+        field has: '(ebrary|proquest)'
+      - tag: '8(8[37]|91)'
+      - tag: '830'
+        field has: 'e-duke'
+      - tag: '9..'
+    omit from comparison subfields:
+      '040': 'cd'
+      '264': 'e'
+      '300': 'c'
+    flag rec status: true
+    incoming record output files:
+      CHANGE: '_change'
+      STATIC: 'do not output'
+      NEW: '_add'
+    produce delete file: true
+    report delete count on screen: true
+    elvl sets AC status: true
+    add AC MARC fields: false
+    add noAC MARC fields: true
+    flag AC recs with changed headings: true
 
 # settings for individual collections/file segments
 # collections must be set up here to be choosable when script is run

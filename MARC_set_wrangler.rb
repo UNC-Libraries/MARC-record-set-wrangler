@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 $LOAD_PATH << '.'
 require 'csv'
 require 'yaml'
@@ -5,6 +7,11 @@ require 'marc'
 require 'marc_record'
 require 'highline/import'
 require 'pp'
+require "unicode_utils/compatibility_decomposition"
+require "unicode_utils/nfkc"
+require "unicode_utils/nfd"
+require "unicode_utils/nfkd"
+require "unicode_utils/each_grapheme"
 
 # Get a hash of your config
 config = begin
@@ -39,6 +46,8 @@ def merge_configs(c1, c2)
       v2
     elsif v1.class.name == 'Array'
       v1 + v2
+    elsif v1.class.name == 'String'
+      v2
     else
       v1.merge!(v2)
     end
@@ -52,14 +61,14 @@ end
 thisconfig = iconfig.dup
 thisconfig = merge_configs(thisconfig, wconfig)
 thisconfig = merge_configs(thisconfig, cconfig)
-#pp(thisconfig)
+pp(thisconfig) if thisconfig['show combined config']
 
 # set the idtag for easy access in rest of script
 idtag = '001'
 
 # Set up in/out directories
 in_dir = 'incoming_marc'
-ex_dir = 'last_processed_marc_ORIG'
+ex_dir = 'existing_marc'
 out_dir = 'output'
 
 # Set up MARC writers
@@ -80,6 +89,35 @@ if thisconfig['log warnings']
   log << ['filename', 'rec id', 'warning']
 end
 
+if thisconfig['overlay merged records']
+  if thisconfig['clean ids']
+    unless thisconfig['merge id']
+      log << ['Configuration warning', 'n/a', "Check your configs. Looks like you want to overlay merged records, but haven't specified a 'merge id' to clean to ensure proper overlay."]
+      puts "\n\nWARNING:\nCheck your configs. Looks like you want to overlay merged records, but haven't specified a 'merge id' to clean to ensure proper overlay."
+    end
+  end
+  unless thisconfig['use existing record set']
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'overlay merged records' = true, 'use existing record set' must be true.\n\n")
+  end
+end
+
+if thisconfig['manipulate 019 for overlay']
+  unless thisconfig['overlay merged records']
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'manipulate 019 for overlay' = true, 'overlay merged records' must be true.\n\n")
+  end
+end
+
+if thisconfig['flag overlay type']
+  unless thisconfig['overlay merged records']
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'flag overlay type' = true, 'overlay merged records' must be true.\n\n")
+  end
+  unless thisconfig['overlay type flag spec']
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'flag overlay type' = true, 'overlay type flag spec' must be configured.\n\n")
+  end
+  
+end
+
+
 def get_recs(dir, label)
   recs = []
   Dir.chdir(dir)
@@ -96,7 +134,7 @@ def get_recs(dir, label)
     Dir.chdir('..')
     return recs
   else
-    raise IOError, "No #{label} .mrc files found in #{dir}." 
+    abort("\n\nSCRIPT FAILURE!:\nNo #{label} .mrc files found in #{dir}.\n\n")
   end
 end
 
@@ -105,23 +143,23 @@ def clean_id(rec, idfields, spec)
     ftag = fspec[0,3]
     sfd = fspec[3] if fspec.size > 3
     recfields = rec.find_all { |fld| fld.tag == ftag }
-     if recfields.size > 0
+    if recfields.size > 0
       recfields.each { |fld|
         fclass = fld.class.name
-         if fclass == 'MARC::ControlField'
+        if fclass == 'MARC::ControlField'
           id = fld.value
-           spec.each { |fr|
+          spec.each { |fr|
             id.gsub!(/#{fr['find']}/, fr['replace'])
-           }
-         elsif fclass == 'MARC::DataField'
-           fld.subfields.each { |sf|
-             if sf.code == sfd
-               id = sf.value
-               spec.each { |fr|
-                 id.gsub!(/#{fr['find']}/, fr['replace'])
-               }
-             end
-           }
+          }
+        elsif fclass == 'MARC::DataField'
+          fld.subfields.each { |sf|
+            if sf.code == sfd
+              id = sf.value
+              spec.each { |fr|
+                id.gsub!(/#{fr['find']}/, fr['replace'])
+              }
+            end
+          }
         else
         end
       }
@@ -135,58 +173,56 @@ def get_fields_by_spec(rec, spec)
   spec.each { |fspec|
     tmpfields = rec.find_all { |flds| flds.tag =~ /#{fspec['tag']}/ }
     if fspec.has_key?('i1')
-      tmpfields.keep_if { |f| f.indicator1 =~ /#{fspec['i1']}/ }
+      tmpfields.select! { |f| f.indicator1 =~ /#{fspec['i1']}/ }
     end
     if fspec.has_key?('i2')
-      tmpfields.keep_if { |f| f.indicator2 =~ /#{fspec['i2']}/ }
+      tmpfields.select! { |f| f.indicator2 =~ /#{fspec['i2']}/ }
     end
     if fspec.has_key?('field has')
-      tmpfields.keep_if { |f| f.to_s =~ /#{fspec['field has']}/i }
+      tmpfields.select! { |f| f.to_s =~ /#{fspec['field has']}/i }
     end
     if fspec.has_key?('field does not have')
       tmpfields.reject! { |f| f.to_s =~ /#{fspec['field does not have']}/i }
     end
     tmpfields.each { |f| fields << f }
   }
+  #  puts fields
   return fields
 end
 
 def get_fields_for_comparison(rec, omitfspec, omitsfspec)
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
-  sfomit = omitsfspec
+  tags_w_sf_omissions = omitsfspec.keys
   compare = []
-  to_compare.each { |f|
-    if f.class.name == 'MARC::DataField'
-      if omitsfspec.size > 0
-        omitsfspec.each { |ef| #edit field
-          tag_w_sf_omissions = ef.keys[0]
-          if f.tag == tag_w_sf_omissions
-            newfield = MARC::DataField.new(f.tag, f.indicator1, f.indicator2)
-            sfs_to_omit = ef.values[0].chars
-            f.subfields.each { |sf|
-              unless sfs_to_omit.include?(sf.code)
-                newsf = MARC::Subfield.new(sf.code, sf.value)
-                newfield.append(newsf)
-              end
-            }
-            compare << newfield
-          else
-            compare << f
+  to_compare.each { |cf|
+    if cf.class.name == 'MARC::ControlField'
+      compare << cf
+    else
+      if tags_w_sf_omissions.include?(cf.tag)
+        sfs_to_omit = omitsfspec[cf.tag].chars
+        newfield = MARC::DataField.new(cf.tag, cf.indicator1, cf.indicator2)
+        cf.subfields.each { |sf|
+          unless sfs_to_omit.include?(sf.code)
+            newsf = MARC::Subfield.new(sf.code, sf.value)
+            newfield.append(newsf)
           end
         }
+        compare << newfield
       else
-        compare << f
+        compare << cf
       end
-    else
-      compare << f
-    end 
-
+    end
   }
   compare_strings = []
-  compare.each { |f| compare_strings << f.to_s }
+  compare.each { |f|
+    fs = f.to_s.encode(Encoding::UTF_8)
+    # fsdc = UnicodeUtils.compatibility_decomposition(fs)
+    # compare_strings << fsdc
+    compare_strings << fs 
+  }
   compare_strings.sort!
-  return compare_strings
+  return compare_strings.uniq
 end
 
 def get_019_matches(rec, the_idtag, ex_id_list)
@@ -196,9 +232,11 @@ def get_019_matches(rec, the_idtag, ex_id_list)
     my019s.each do |chkid|
       if ex_id_list.has_key?(chkid)
         match019 << chkid
-        rec.overlay_point << {'019' => chkid}
-        ex_id_list[chkid].overlay_point << {'019' => rec[the_idtag].value}
+        rec.overlay_point << {'019a' => chkid}
+        ex_id_list[chkid].overlay_point << {'019a' => rec[the_idtag].value}
 
+#        puts "Inrec op:\n#{rec.overlay_point.inspect}"
+#        puts "Exrec op:\n#{ex_id_list[chkid].overlay_point.inspect}"
         # Interpreting 019-related .overlay_point values
         # {'019'=>'x'}
         # INCOMING RECORD
@@ -213,9 +251,10 @@ end
 
 def put_matching_019_sf_first(rec)
   my019s = rec.get_019_vals
+  puts my019s.inspect
   match019 = ''
   rec.overlay_point.each { |op|
-    match019 = op['019'] if op.has_key?('019')
+    match019 = op['019a'] if op.has_key?('019a')
   }
   nomatch019 = []
   my019s.each { |id| nomatch019 << id unless id == match019 }
@@ -263,19 +302,33 @@ end
 in_mrc = get_recs(in_dir, 'incoming')
 ex_mrc = get_recs(ex_dir, 'existing') if thisconfig['use existing record set']
 
+# Set our list of ID fields to clean or add affix to
+  idfields = []
+  idfields << thisconfig['main id'] if thisconfig['main id']
+  idfields << thisconfig['merge id'] if thisconfig['merge id']
 
 # Set affix if it's going to be used, otherwise it is blank string
 if thisconfig['use id affix']
-  #get fields we'll add affix to
-  idfields = []
-  idfields << thisconfig['main id']
-  idfields << thisconfig['merge id'] if thisconfig['merge id']
-  puts "\n\nThe #{thisconfig['affix type']} #{thisconfig['id affix value']} will be added to #{idfields.join(', ')}."
+  if idfields.size > 0
+    unless thisconfig['affix type']
+      abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify 'affix type'\n\n")
+    end
+    unless thisconfig['id affix value']
+      abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify 'id affix value'\n\n")
+    end
+    puts "\n\nThe #{thisconfig['affix type']} #{thisconfig['id affix value']} will be added to #{idfields.join(', ')}."
+  else
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
+  end
 end
 # NOTE: Since we are comparing original files below, we don't need to add id suffixes
 #  until we output the processed records.
 
-
+if thisconfig['clean ids'] && idfields.size == 0
+  abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'clean ids' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
+end
+  
+  
 if thisconfig['use existing record set']
   # Set up hash of existing records, keyed by idtag value, for comparing sets
   # rec.overlay_point of {'019'=>x} here means:
@@ -287,30 +340,44 @@ if thisconfig['use existing record set']
 
   ex_mrc.each { |rec|
     clean_id(rec, idfields, thisconfig['clean ids']) if thisconfig['clean ids']
-    ex_ids[rec[idtag].value] = rec
+    recid = begin
+              rec[idtag].value
+            rescue NoMethodError => e
+              abort("\n\nSCRIPT FAILURE!\nExisting record(s) are missing 001 values, so I can't do any reliable comparisons with them.\n\n")
+            end
+    ex_ids[recid] = rec
   }
 end
 
 # Process incoming records
 in_mrc.each { |rec|
-  clean_id(rec, idfields, thisconfig['clean ids']) if thisconfig['clean ids']
+
+  if thisconfig['clean ids']
+    clean_id(rec, idfields, thisconfig['clean ids'])
+  end
 
   if thisconfig['use existing record set']
+    recid = begin
+              rec[idtag].value
+            rescue NoMethodError => e
+              abort("\n\nSCRIPT FAILURE!\nIncoming record(s) are missing 001 values, so I can't do any reliable comparisons with them.\n\n")
+            end
+
     # Set record.overlay_point of incoming record to idtag info if there's a match on main record id
     # Since this match relies on main record id being the same in incoming and existing
     #  records, also set record.overlay_point of existing record.  
-    if ex_ids.has_key?(rec[idtag].value)
-      op = {idtag => rec[idtag].value}
+    if ex_ids.has_key?(recid)
+      op = {idtag => recid}
       rec.overlay_point << op
-      exrec = ex_ids[rec[idtag].value]
+      exrec = ex_ids[recid]
       exrec.overlay_point << op
     end
 
-    if thisconfig['overlay matchpoint includes 019']
+    if thisconfig['overlay merged records']
       # Check for overlays between existing 001 and any 019$a in an incoming record
       get_019_matches(rec, idtag, ex_ids)
       if thisconfig['manipulate 019 for overlay']
-        rec.overlay_point.each { |op| put_matching_019_sf_first(rec) if op.has_key?('019') }
+        rec.overlay_point.each { |op| put_matching_019_sf_first(rec) if op.has_key?('019a') }
       end
     end
 
@@ -342,7 +409,7 @@ in_mrc.each { |rec|
           rec.diff_status = 'STATIC'
         end
       else
-          rec.diff_status = 'NEW'
+        rec.diff_status = 'NEW'
       end
     end
     
@@ -459,7 +526,7 @@ in_mrc.each { |rec|
               end
             } 
           end
-      }
+        }
       }
     end
   end
