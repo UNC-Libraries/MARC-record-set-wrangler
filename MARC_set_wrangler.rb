@@ -13,6 +13,8 @@ require "unicode_utils/nfd"
 require "unicode_utils/nfkd"
 require "unicode_utils/each_grapheme"
 
+puts "\n\n"
+
 # Get a hash of your config
 config = begin
            YAML.load(File.open('config.yaml'))
@@ -22,20 +24,20 @@ config = begin
 iconfig = config['institution']
 
 # Find out what workflow and collection we're dealing with and set those configs
-def return_specific_config(configsection)
+def return_specific_config(configsection, configlevel)
   choices = []
   configsection.each_key { |k| choices << k.to_sym }
   choose do |menu|
     menu.index = :number
     menu.index_suffix = ') '
-    menu.prompt = 'Which workflow do I use? '
+    menu.prompt = "Which of the above #{configlevel}s do I use? "
     menu.choices(*choices) do |chosen|
       return configsection[chosen.to_s]
     end
   end
 end
-wconfig = return_specific_config(config['workflows'])
-cconfig = return_specific_config(config['collections'])
+wconfig = return_specific_config(config['workflows'], 'workflow')
+cconfig = return_specific_config(config['collections'], 'collection')
 
 # create specific config hash for this process
 def merge_configs(c1, c2)
@@ -251,7 +253,6 @@ end
 
 def put_matching_019_sf_first(rec)
   my019s = rec.get_019_vals
-  puts my019s.inspect
   match019 = ''
   rec.overlay_point.each { |op|
     match019 = op['019a'] if op.has_key?('019a')

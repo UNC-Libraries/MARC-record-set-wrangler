@@ -1,6 +1,5 @@
 ---
 institution: 
-  show combined config: false
   main id: '001'
   merge id: '019a'
   cat lang:
@@ -93,55 +92,56 @@ institution:
       subfields:
         - delimiter: 'a'
           value: 'LTIEXP'
-          
+  show combined config: false
+  
 workflows:
   WCM - routine update using most recent whole file + last whole file:
-    #clean ids:
-    #  - find: '^o(c[mn]|n)'
-    #    replace: ''
-    #  - find: ' *$'
-    #    replace: ''
-    #  - find: '\\$'
-    #    replace: ''
-    #use id affix: true
-    #affix type: 'suffix'
-    #id affix value: 'wcm'
+    clean ids:
+      - find: '^o(c[mn]|n)'
+        replace: ''
+      - find: ' *$'
+        replace: ''
+      - find: '\\$'
+        replace: ''
+    use id affix: true
+    affix type: 'suffix'
+    id affix value: 'wcm'
     use existing record set: true
     overlay merged records: true
     manipulate 019 for overlay: true
     flag overlay type: true
-    #set record status by file diff: true
-    #report record status counts on screen: true
-    #omit from comparison fields:
-    #  - tag: '005'
-    #  - tag: '019'
-    #  - tag: '035'
-    #  - tag: '598'
-    #    field has: 'Reason for updated record:'
-    #  - tag: '655'
-    #    field has: 'Electronic book'
-    #  - tag: '773'
-    #    field has: '\(online collection\)'
-    #  - tag: '938'
-    #  - tag: '994'
-    #  - tag: '999'
-    #omit from comparison subfields:
-    #  '040': 'cd'
-    #flag rec status: true
-    #incoming record output files:
-    #  CHANGE: '_change'
-    #  STATIC: '_static'
-    #  NEW: '_add'
-    #produce delete file: true
-    #report delete count on screen: true
-    #elvl sets AC status: true
-    #add AC MARC fields: false
-    #add noAC MARC fields: true
-    #flag AC recs with changed headings: true
-    #warn about non-e-resource records: true
-    #warn about cat lang: true
-    #write warnings to recs: true
-    #log warnings: true
+    set record status by file diff: true
+    report record status counts on screen: true
+    omit from comparison fields:
+      - tag: '005'
+      - tag: '019'
+      - tag: '035'
+      - tag: '598'
+        field has: 'Reason for updated record:'
+      - tag: '655'
+        field has: 'Electronic book'
+      - tag: '773'
+        field has: '\(online collection\)'
+      - tag: '938'
+      - tag: '994'
+      - tag: '999'
+    omit from comparison subfields:
+      '040': 'cd'
+    flag rec status: true
+    incoming record output files:
+      CHANGE: '_change'
+      STATIC: '_static'
+      NEW: '_add'
+    produce delete file: true
+    report delete count on screen: true
+    elvl sets AC status: true
+    add AC MARC fields: false
+    add noAC MARC fields: true
+    flag AC recs with changed headings: true
+    warn about non-e-resource records: true
+    warn about cat lang: true
+    write warnings to recs: true
+    log warnings: true
 
   WCM - whole file - new or fresh reload:
     clean ids:
