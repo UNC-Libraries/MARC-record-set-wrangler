@@ -8,11 +8,6 @@ require 'marc_record'
 require 'highline/import'
 require 'pp'
 require 'pstore'
-require "unicode_utils/compatibility_decomposition"
-require "unicode_utils/nfkc"
-require "unicode_utils/nfd"
-require "unicode_utils/nfkd"
-require "unicode_utils/each_grapheme"
 
 puts "\n\n"
 
@@ -79,6 +74,8 @@ idfields = []
 idfields << thisconfig['main id'] if thisconfig['main id']
 idfields << thisconfig['merge id'] if thisconfig['merge id']
 
+# list of filepaths (incoming and existing)
+rec_files = []
 
 # RecordInfo holds basic data about MARC records needed for matching ids and
 #  other processing, as well as efficiently retrieving the full MARC record
@@ -97,6 +94,7 @@ class RecordInfo
   attr_accessor :warnings
   attr_accessor :ovdata
   attr_accessor :overlay_type
+  attr_accessor :under_ac
 
   def initialize(id)
     @id = id
@@ -116,6 +114,91 @@ end
 class ExistingRecordInfo < RecordInfo
   alias :will_be_overlaid_by :ovdata
   alias :will_be_overlaid_by= :ovdata=
+end
+
+class Affix
+  attr_reader :affix
+  attr_reader :type
+
+  def initialize(affix, type)
+    @affix = affix
+    if type =~ /(pre|suf)fix/
+      @type = type
+    else
+      raise ArgumentError, "'affix type' option in config.yaml must be either 'prefix' or 'suffix'"
+    end
+  end
+
+  def add_to_value(value)
+    case @type
+    when 'prefix'
+      @affix + value
+    when 'suffix'
+      value + @affix
+    end
+  end
+
+  def add_to_record(rec, id_elements)
+    id_elements.each do |ide|
+      e = SpecifiedMarcElement.new(ide)
+      if rec.tags.include?(e.tag)
+        rec.find_all { |field| field.tag == e.tag }.each do |field|
+          case field.class.name
+          when 'MARC::ControlField'
+            field.value = add_to_value(field.value)
+          when 'MARC::DataField'
+            clean_sfs = field.subfields.select { |sf| e.subfields.include?(sf.code) }
+            clean_sfs.each { |sf| sf.value = add_to_value(sf.value) }
+          end
+        end
+      end
+    end
+    rec
+  end
+end
+
+class IdCleaner
+  attr_reader :cleaning_routine
+
+  def initialize(cleaning_routine)
+    @cleaning_routine = cleaning_routine
+  end
+
+  def clean(idvalue)
+    @cleaning_routine.each do |step|
+      idvalue.gsub!(/#{step['find']}/, step['replace'])
+    end
+    idvalue
+  end
+
+  def clean_record(rec, id_elements)
+    id_elements.each do |ide|
+      e = SpecifiedMarcElement.new(ide)
+      if rec.tags.include?(e.tag)
+        rec.find_all { |field| field.tag == e.tag }.each do |field|
+          case field.class.name
+          when 'MARC::ControlField'
+            field.value = clean(field.value)
+          when 'MARC::DataField'
+            clean_sfs = field.subfields.select { |sf| e.subfields.include?(sf.code) }
+            clean_sfs.each { |sf| sf.value = clean(sf.value) }
+          end
+        end
+      end
+    end
+    rec
+  end
+end
+
+class AuthorityControlStatus
+  attr_reader :elvl_to_ac_map
+  def initialize(spec)
+    @elvl_to_ac_map = spec
+  end
+  
+  def get_by_elvl(elvl)
+    @elvl_to_ac_map[elvl]
+  end
 end
 
 # Set up in/out directories
@@ -174,6 +257,14 @@ if thisconfig['flag overlay type']
   end
 end
 
+if thisconfig['elvl sets AC status']
+  if thisconfig['elvl AC map']
+    ac_status = AuthorityControlStatus.new(thisconfig['elvl AC map'])
+  else
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'elvl sets AC status' = true, 'elvl AC map' must be configured.\n\n")
+  end
+end
+
 # Set affix if it's going to be used, otherwise it is blank string
 if thisconfig['use id affix']
   if idfields.size > 0
@@ -184,6 +275,7 @@ if thisconfig['use id affix']
       abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify 'id affix value'\n\n")
     end
     puts "\n\nThe #{thisconfig['affix type']} #{thisconfig['id affix value']} will be added to #{idfields.join(', ')}."
+    affix_handler = Affix.new(thisconfig['id affix value'], thisconfig['affix type'])
   else
     abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
   end
@@ -191,7 +283,9 @@ end
 # NOTE: Since we are comparing original files below, we don't need to add id suffixes
 #  until we output the processed records.
 
-if thisconfig['clean ids'] && idfields.size == 0
+if thisconfig['clean ids'] && idfields.size > 0
+  cleaner = IdCleaner.new(thisconfig['clean ids'])
+else
   abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'clean ids' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
 end
 
@@ -200,7 +294,7 @@ end
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # Produces array of RecInfo structs from the MARC files in a directory
-def get_rec_info(dir, label)
+def get_rec_info(dir, label, rec_files)
   puts "\n\nGetting record metadata from the following #{dir} files:"
   recinfos = []
   Dir.chdir(dir)
@@ -210,6 +304,7 @@ def get_rec_info(dir, label)
     infiles.each { |file|
       index = 0
       sourcefile = "#{dir}/#{file}"
+      rec_files << sourcefile
       MARC::Reader.new(file).each { |rec|
         recid = begin
                   id = rec['001'].value.dup
@@ -237,20 +332,6 @@ def get_rec_info(dir, label)
   else
     abort("\n\nSCRIPT FAILURE!:\nNo #{label} .mrc files found in #{dir}.\n\n")
   end
-end
-
-# Takes:
-#  idvalue - the String value of an ID control field or data field subfield to be cleaned
-#  spec - the 'clean id' specification, which is a list of find/replace operations
-# Does:
-#  specified find/replaces on the input String
-# Returns:
-#  modified idvalue String
-def clean_id_value(idvalue, spec)
-  spec.each { |fr|
-    idvalue.gsub!(/#{fr['find']}/, fr['replace'])
-  }
-  return idvalue
 end
 
 def make_rec_info_hash(ri_array)
@@ -374,22 +455,6 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec)
   return compare_strings.uniq
 end
 
-def put_matching_019_sf_first(rec)
-  my019s = rec.get_019_vals
-  match019 = ''
-  rec.overlay_point.each { |op|
-    match019 = op['019a'] if op.has_key?('019a')
-  }
-  nomatch019 = []
-  my019s.each { |id| nomatch019 << id unless id == match019 }
-  rec.delete_fields_by_tag('019')
-  newfield = (MARC::DataField.new('019', ' ', ' ', ['a', match019]))
-  if nomatch019.size > 0
-    nomatch019.each { |e| newfield.append(MARC::Subfield.new('a', e)) }
-  end
-  rec.append(newfield)
-end
-
 def add_marc_var_fields(rec, fspec)
   fspec.each { |fs|
     sfval = ''
@@ -422,12 +487,33 @@ def add_marc_var_fields_replacing_values(rec, fspec, replaces)
   }
 end
 
-def setup_rec_access(dir, rec_access)
-  Dir.chdir(dir)
-  infiles = Dir.glob('*.mrc')
-  if infiles.size > 0
-    infiles.each { |file|
-      path = "#{dir}/#{file}"
+class MarcEdit
+  def initialize(rec)
+    @rec = rec
+  end
+
+  def add_field(fspec)
+    fs = fspec.dup
+    field = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
+    fs['subfields'].each do |sf|
+      field.append(MARC::Subfield.new(sf['delimiter'], sf['value']))
+    end
+    @rec.append(field)
+  end
+
+  def sort_fields
+    field_hash = @rec.group_by { |field| field.tag }
+    newrec = MARC::Record.new()
+    field_hash.keys.sort!.each do |tag|
+      field_hash[tag].each { |f| newrec.append(f) }
+    end
+    newrec
+  end
+end
+
+def setup_rec_access(filelist, rec_access)
+  if filelist.size > 0
+    filelist.each { |file|
       index = 0
       rawhash = {}
       MARC::Reader.new(file).each_raw { |rec|
@@ -435,7 +521,7 @@ def setup_rec_access(dir, rec_access)
         index += 1
       }
       rec_access.transaction {
-        rec_access[path] = rawhash
+        rec_access[file] = rawhash
       }
     }
   end
@@ -473,33 +559,93 @@ def check_for_multiple_overlays(sets)
   end
 end
 
+class PstoreMarcRetriever
+  attr_accessor :sourcefile
+  attr_accessor :pstorefile
+  attr_accessor :marchash
+
+  def initialize(sourcefile, pstorefile)
+    @sourcefile = sourcefile
+    @pstorefile = pstorefile
+    @pstorefile.transaction {
+      @marchash = @pstorefile[@sourcefile]
+    }
+  end
+
+  def get(index)
+    raw = @marchash[index]
+    MARC::Reader.decode(raw)
+  end
+end
+
+class MergeIdManipulator
+  attr_reader :rec
+  attr_reader :recinfo
+  attr_reader :ex_rec_id
+  
+  def initialize(rec, recinfo)
+    @rec = rec
+    @recinfo = recinfo
+    ex_ind = @recinfo.overlay_type.index('merge id')
+    @ex_rec_id = @recinfo.ovdata[ex_ind].id
+  end
+
+  def fix
+    matching_val = @rec.get_019_vals.select { |v| v == @ex_rec_id }
+    matching_val = matching_val[0]
+    nonmatching_val = @rec.get_019_vals.select { |v| v != @ex_rec_id }
+    @rec.delete_fields_by_tag('019')
+    newfield = (MARC::DataField.new('019', ' ', ' ', ['a', matching_val]))
+    if nonmatching_val.size > 0
+      nonmatching_val.each { |e| newfield.append(MARC::Subfield.new('a', e)) }
+    end
+    @rec.append(newfield)
+    @rec
+  end
+end
+
+class SpecifiedMarcElement
+  attr_reader :tag
+  attr_reader :subfields #array of relevant subfield delimiters
+
+  def initialize(spec)
+    copy = spec.dup
+    @tag = copy.slice!(/^.../)
+    @subfields = copy.chars
+  end
+end
+
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Do the actual things...
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Pull in our incoming and, if relevant, previously loaded MARC records
+
+
+# Pull in our inpcoming and, if relevant, previously loaded MARC records
 rec_info_sets = []
-in_rec_info = get_rec_info(in_dir, 'incoming')
+in_rec_info = get_rec_info(in_dir, 'incoming', rec_files)
 rec_info_sets << in_rec_info
 
 if thisconfig['use existing record set']
-  ex_rec_info = get_rec_info(ex_dir, 'existing')
+  ex_rec_info = get_rec_info(ex_dir, 'existing', rec_files)
   rec_info_sets << ex_rec_info
-  setup_rec_access(ex_dir, rec_access)
 end
 
 if thisconfig['clean ids']
   # clean the script's internally used ids before working with them
   rec_info_sets.each { |set|
     set.each { |rec_info|
-      rec_info.id = clean_id_value(rec_info.id, thisconfig['clean ids'])
+      rec_info.id = cleaner.clean(rec_info.id)
       if rec_info.mergeids.size > 0
         rec_info.mergeids.each { |mid|
-          mid = clean_id_value(mid, thisconfig['clean ids'])
+          mid = cleaner.clean(mid)
         }
       end
     }
   }
 end
+
+setup_rec_access(rec_files, rec_access)
 
 # get record info hashes, indexed by 001 value, to work with
 if thisconfig['use existing record set']
@@ -537,7 +683,14 @@ if thisconfig['use existing record set']
   end
 end
 
-check_for_multiple_overlays(rec_info_sets) unless thisconfig['ignore multiple overlays']
+case thisconfig['ignore multiple overlays']
+when true
+  puts "\n\nWARNING. Will NOT check for multiple overlays.\n"
+when false
+  check_for_multiple_overlays(rec_info_sets)
+end
+
+#pp(in_rec_info)
 
 if thisconfig['set record status by file diff']
   
@@ -561,17 +714,68 @@ if thisconfig['produce delete file']
   end
 end
 
+# process each incoming record
+in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
+  reclookup = PstoreMarcRetriever.new(sourcefile, rec_access)
+  riset.each do |ri|
+    rec = reclookup.get(ri.index)
 
-# rec_info_sets.each { |set|
-#   set.each { |ri| pp(ri); puts ''}
-# }
+    if thisconfig['clean ids']
+      rec = cleaner.clean_record(rec, idfields)
+    end
+
+    if thisconfig['use id affix']
+      rec = affix_handler.add_to_record(rec, idfields)
+    end
+    
+    if thisconfig['overlay merged records']
+      rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
+    end
+
+    if thisconfig['warn about non-e-resource records']
+      ri.warnings << 'Not an e-resource record?' unless rec.is_e_rec? == 'yes'
+    end
+
+    if thisconfig['warn about cat lang']
+      catlangs = thisconfig['cat lang']
+      reclang = rec.cat_lang
+      ri.warnings << 'Not our language of cataloging' unless catlangs.include?(reclang)
+    end
+
+    if thisconfig['elvl sets AC status']
+      elvl = rec.encoding_level
+      case ac_status.get_by_elvl(elvl)
+      when nil
+        ri.warnings << "#{elvl} is not in elvl AC map. Please add to config."
+      when 'AC'
+        ri.under_ac = true
+      when 'noAC'
+        ri.under_ac = false
+      end
+    end
+
+    if thisconfig['add MARC field spec']
+      reced = MarcEdit.new(rec)
+      thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }        
+    end
+
+    puts "\n\n#{rec}"
+    
+    rec = MarcEdit.new(rec).sort_fields
+
+    if thisconfig['log warnings']
+      ri.warnings.each { |w| log << [ri.sourcefile, ri.id, w] }
+    end
+    
+    puts "\n#{rec}"
+    #pp(ri)
 
 
-#     if thisconfig['overlay merged records']
-#       if thisconfig['manipulate 019 for overlay']
-#         rec.overlay_point.each { |op| put_matching_019_sf_first(rec) if op.has_key?('019a') }
-#       end
-#     end
+  end
+end
+
+
+
 
 #     if thisconfig['flag overlay type']
 #       if rec.overlay_point.size > 0
@@ -630,28 +834,7 @@ end
 #     end
 #   end
 
-#   if thisconfig['warn about non-e-resource records']
-#     if rec.is_e_rec? == 'no'
-#       rec.warnings << 'Not an e-resource record?'
-#     end
-#   end
 
-#   if thisconfig['warn about cat lang']
-#     catlangs = thisconfig['cat lang']
-#     reclang = rec.cat_lang
-#     unless catlangs.include?(reclang)
-#       rec.warnings << 'Not our language of cataloging'
-#     end
-#   end
-
-#   if thisconfig['elvl sets AC status']
-#     elvl = rec.encoding_level
-#     ac_map = thisconfig['elvl AC map']
-#     if ac_map
-#       rec.ac_action = ac_map[elvl]
-#     else
-#       raise ArgumentError, "Please configure 'elvl AC map' in config.yaml"
-#     end
 
 #     if rec.ac_action == 'AC'
 #       if thisconfig['add AC MARC fields']
@@ -689,39 +872,6 @@ end
 #     end
 #   end
 
-#   def add_affix(value, affix, type)
-#     if type == 'suffix'
-#       value = value + affix
-#     elsif type == 'prefix'
-#       value = affix + value
-#     else
-#       raise ArgumentError, "'affix type' option in config.yaml must be either 'prefix' or 'suffix'"
-#     end
-#     return value
-#   end
-
-#   if thisconfig['use id affix']
-#     myfix = thisconfig['id affix value']
-#     unless myfix == ''
-#       idfields.each { |fspec|
-#         ftag = fspec[0,3]
-#         sfd = fspec[3] if fspec.size > 3
-#         rec.find_all { |fld| fld.tag == ftag }.each { |fld|
-
-#           fclass = fld.class.name
-#           if fclass == 'MARC::ControlField'
-#             fld.value = add_affix(fld.value, myfix, thisconfig['affix type'])
-#           elsif fclass == 'MARC::DataField'
-#             fld.subfields.each { |sf|
-#               if sf.code == sfd
-#                 sf.value = add_affix(sf.value, myfix, thisconfig['affix type'])
-#               end
-#             } 
-#           end
-#         }
-#       }
-#     end
-#   end
 
 #   if thisconfig['incoming record output files']
 #     status = rec.diff_status
@@ -737,6 +887,8 @@ end
 #     out_mrc.write(rec)
 #   end
 # }
+
+# end process each incoming record
 
 # if thisconfig['report record status counts on screen']
 #   puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
@@ -772,12 +924,12 @@ end
 #   puts "#{deletes.size} delete" if thisconfig['report delete count on screen']
 # end
 
-# if thisconfig['log warnings']
-#   log.close
-#   logname = "#{out_dir}/#{filestem}_log.csv"
-#   line_count = `wc -l "#{logname}"`.strip.split(' ')[0].to_i
-#   File.delete(logname) if line_count == 1
-# end
+if thisconfig['log warnings']
+  log.close
+  logname = "#{out_dir}/#{filestem}_log.csv"
+  line_count = `wc -l "#{logname}"`.strip.split(' ')[0].to_i
+  File.delete(logname) if line_count == 1
+end
 
 # if thisconfig['incoming record output files']
 #   writer_list = writers.keys
