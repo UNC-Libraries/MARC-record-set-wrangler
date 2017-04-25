@@ -95,6 +95,8 @@ class RecordInfo
   attr_accessor :ovdata
   attr_accessor :overlay_type
   attr_accessor :under_ac
+  attr_accessor :changed_fields
+  attr_accessor :diff_status
 
   def initialize(id)
     @id = id
@@ -289,6 +291,11 @@ else
   abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'clean ids' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
 end
 
+if thisconfig['set record status by file diff']
+  omission_spec = thisconfig['omit from comparison fields']
+  omission_spec_sf = thisconfig['omit from comparison subfields']
+end
+  
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Define repeated procedures
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -446,25 +453,13 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec)
   }
   compare_strings = []
   compare.each { |f|
-    fs = f.to_s.encode(Encoding::UTF_8)
+    fs = f.to_s
     # fsdc = UnicodeUtils.compatibility_decomposition(fs)
     # compare_strings << fsdc
     compare_strings << fs 
   }
   compare_strings.sort!
   return compare_strings.uniq
-end
-
-def add_marc_var_fields(rec, fspec)
-  fspec.each { |fs|
-    sfval = ''
-    f = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
-    fs['subfields'].each { |sfs|
-      sf = MARC::Subfield.new(sfs['delimiter'], sfs['value'])
-      f.append(sf)
-    }
-    rec.append(f)
-  }
 end
 
 class MarcEdit
@@ -720,18 +715,25 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
   riset.each do |ri|
     rec = reclookup.get(ri.index)
 
-    if thisconfig['clean ids']
-      rec = cleaner.clean_record(rec, idfields)
-    end
+    if thisconfig['set record status by file diff']
+      if ri.ovdata.size > 0
+        ex_ri = ri.ovdata[0]
+        exrec = PstoreMarcRetriever.new(ex_ri.sourcefile, rec_access).get(ex_ri.index)
 
-    if thisconfig['use id affix']
-      rec = affix_handler.add_to_record(rec, idfields)
+        compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf)
+        compold = get_fields_for_comparison(exrec, omission_spec, omission_spec_sf)
+        
+        ri.changed_fields = ( compnew - compold ) + ( compold - compnew )
+        if ri.changed_fields.size > 0
+          ri.diff_status = 'CHANGE'
+        else
+          ri.diff_status = 'STATIC'
+        end
+      else
+        ri.diff_status = 'NEW'
+      end
     end
     
-    if thisconfig['overlay merged records']
-      rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
-    end
-
     if thisconfig['warn about non-e-resource records']
       ri.warnings << 'Not an e-resource record?' unless rec.is_e_rec? == 'yes'
     end
@@ -754,6 +756,17 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       end
     end
 
+    if thisconfig['clean ids']
+      rec = cleaner.clean_record(rec, idfields)
+    end
+
+    if thisconfig['use id affix']
+      rec = affix_handler.add_to_record(rec, idfields)
+    end
+    
+    if thisconfig['overlay merged records']
+      rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
+    end
 
     
     if thisconfig['flag overlay type']
@@ -788,7 +801,7 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       ri.warnings.each { |w| log << [ri.sourcefile, ri.id, w] }
     end
     
-    puts "\n#{rec}"
+    #puts "\n#{rec}"
     #pp(ri)
 
 
@@ -799,23 +812,7 @@ end
 
 
 
-#     if thisconfig['set record status by file diff']
-#       if rec.overlay_point.size > 0
-#         omission_spec = thisconfig['omit from comparison fields']
-#         omission_spec_sf = thisconfig['omit from comparison subfields']
-#         compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf)
-#         old_rec_id = rec.overlay_point[0].values[0]
-#         compold = get_fields_for_comparison(ex_ids[old_rec_id], omission_spec, omission_spec_sf)
-#         rec.changed_fields = compnew - compold
-#         if rec.changed_fields.size > 0
-#           rec.diff_status = 'CHANGE'
-#         else
-#           rec.diff_status = 'STATIC'
-#         end
-#       else
-#         rec.diff_status = 'NEW'
-#       end
-#     end
+
 
 #     if thisconfig['flag rec status']
 #       add_marc_var_fields_replacing_values(rec, thisconfig['rec status flag spec'], [{'[RECORDSTATUS]'=>rec.diff_status}])
