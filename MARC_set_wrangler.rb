@@ -259,6 +259,18 @@ if thisconfig['flag overlay type']
   end
 end
 
+if thisconfig['add AC MARC fields']
+  unless thisconfig['add AC MARC spec']
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'add AC MARC fields' = true, 'add AC MARC spec' must be configured. In other words --- I need to know what field(s) to add to records under AC.\n\n")
+  end
+end
+
+if thisconfig['add noAC MARC fields']
+  unless thisconfig['add noAC MARC spec']
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'add noAC MARC fields' = true, 'add noAC MARC spec' must be configured. In other words --- I need to know what field(s) to add to records NOTunder AC.\n\n")
+  end
+end
+
 if thisconfig['elvl sets AC status']
   if thisconfig['elvl AC map']
     ac_status = AuthorityControlStatus.new(thisconfig['elvl AC map'])
@@ -783,7 +795,29 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       end
     end
   end
-  
+
+  case ri.under_ac
+  when true
+    if thisconfig['add AC MARC fields']
+#         if thisconfig['add AC MARC spec']
+#           add_marc_var_fields(rec, thisconfig['add AC MARC spec'])
+#         else
+#           raise ArgumentError, "Please configure 'add AC MARC spec' in config.yaml"
+#         end
+#       end
+#     end
+
+#     if rec.ac_action == 'noAC'
+#       if thisconfig['add noAC MARC fields']
+#         if thisconfig['add noAC MARC spec']
+#           add_marc_var_fields(rec, thisconfig['add noAC MARC spec'])
+#         else
+#           raise ArgumentError, "Please configure 'add noAC MARC spec' in config.yaml"
+#         end
+#       end
+#     end
+#   end
+
   if thisconfig['add MARC field spec']
     reced = MarcEdit.new(rec)
     thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }        
@@ -843,27 +877,6 @@ end
 #   end
 
 
-
-#     if rec.ac_action == 'AC'
-#       if thisconfig['add AC MARC fields']
-#         if thisconfig['add AC MARC spec']
-#           add_marc_var_fields(rec, thisconfig['add AC MARC spec'])
-#         else
-#           raise ArgumentError, "Please configure 'add AC MARC spec' in config.yaml"
-#         end
-#       end
-#     end
-
-#     if rec.ac_action == 'noAC'
-#       if thisconfig['add noAC MARC fields']
-#         if thisconfig['add noAC MARC spec']
-#           add_marc_var_fields(rec, thisconfig['add noAC MARC spec'])
-#         else
-#           raise ArgumentError, "Please configure 'add noAC MARC spec' in config.yaml"
-#         end
-#       end
-#     end
-#   end
 
 #   if thisconfig['incoming record output files']
 #     status = rec.diff_status
