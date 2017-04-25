@@ -768,20 +768,26 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
     end
 
-    
-    if thisconfig['flag overlay type']
-      if ri.overlay_type.size > 0
-        reced = MarcEdit.new(rec)
-        ri.overlay_type.each do |type|
-          reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
-        end
+    if thisconfig['flag rec status']
+      reced = MarcEdit.new(rec)
+      this_spec = thisconfig['rec status flag spec']
+      this_replace = [{'[RECORDSTATUS]'=>ri.diff_status}]
+      reced.add_field_with_parameter(this_spec, this_replace)
+    end
+  
+  if thisconfig['flag overlay type']
+    if ri.overlay_type.size > 0
+      reced = MarcEdit.new(rec)
+      ri.overlay_type.each do |type|
+        reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
       end
     end
-    
-    if thisconfig['add MARC field spec']
-      reced = MarcEdit.new(rec)
-      thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }        
-    end
+  end
+  
+  if thisconfig['add MARC field spec']
+    reced = MarcEdit.new(rec)
+    thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }        
+  end
 
     if thisconfig['write warnings to recs']
       if ri.warnings.size > 0
@@ -801,7 +807,7 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       ri.warnings.each { |w| log << [ri.sourcefile, ri.id, w] }
     end
     
-    #puts "\n#{rec}"
+    puts "\n#{rec}"
     #pp(ri)
 
 
@@ -814,10 +820,7 @@ end
 
 
 
-#     if thisconfig['flag rec status']
-#       add_marc_var_fields_replacing_values(rec, thisconfig['rec status flag spec'], [{'[RECORDSTATUS]'=>rec.diff_status}])
-#     end
-#   end
+
 
 #   if thisconfig['flag AC recs with changed headings']
 #     if rec.overlay_point.size > 0
