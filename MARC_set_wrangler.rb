@@ -799,28 +799,17 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
   case ri.under_ac
   when true
     if thisconfig['add AC MARC fields']
-#         if thisconfig['add AC MARC spec']
-#           add_marc_var_fields(rec, thisconfig['add AC MARC spec'])
-#         else
-#           raise ArgumentError, "Please configure 'add AC MARC spec' in config.yaml"
-#         end
-#       end
-#     end
-
-#     if rec.ac_action == 'noAC'
-#       if thisconfig['add noAC MARC fields']
-#         if thisconfig['add noAC MARC spec']
-#           add_marc_var_fields(rec, thisconfig['add noAC MARC spec'])
-#         else
-#           raise ArgumentError, "Please configure 'add noAC MARC spec' in config.yaml"
-#         end
-#       end
-#     end
-#   end
+      reced = MarcEdit.new(rec)
+      thisconfig['add AC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+    end
+  when false
+    if thisconfig['add noAC MARC fields']
+      thisconfig['add noAC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+    end
+  end
 
   if thisconfig['add MARC field spec']
-    reced = MarcEdit.new(rec)
-    thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }        
+    thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
   end
 
     if thisconfig['write warnings to recs']
