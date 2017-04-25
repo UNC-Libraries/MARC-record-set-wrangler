@@ -20,7 +20,7 @@ institution:
       subfields:
         - delimiter: 'a'
           value: 'WARNING'
-        - delimter: 'b'
+        - delimiter: 'b'
           value: '[WARNINGTEXT]'
   rec status flag spec:
     - tag: '999'
