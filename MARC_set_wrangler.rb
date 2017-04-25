@@ -467,8 +467,22 @@ def add_marc_var_fields(rec, fspec)
   }
 end
 
-def add_marc_var_fields_replacing_values(rec, fspec, replaces)
-  fspec.each { |fs|
+class MarcEdit
+  def initialize(rec)
+    @rec = rec
+  end
+
+  def add_field(fspec)
+    fs = fspec.dup
+    field = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
+    fs['subfields'].each do |sf|
+      field.append(MARC::Subfield.new(sf['delimiter'], sf['value']))
+    end
+    @rec.append(field)
+  end
+
+  def add_field_with_parameter(fspec, replaces)
+   fspec.each { |fs|
     sfval = ''
     f = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
     fs['subfields'].each { |sfs|
@@ -483,22 +497,8 @@ def add_marc_var_fields_replacing_values(rec, fspec, replaces)
       sf = MARC::Subfield.new(sfs['delimiter'], sfval)
       f.append(sf)
     }
-    rec.append(f)
-  }
-end
-
-class MarcEdit
-  def initialize(rec)
-    @rec = rec
-  end
-
-  def add_field(fspec)
-    fs = fspec.dup
-    field = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
-    fs['subfields'].each do |sf|
-      field.append(MARC::Subfield.new(sf['delimiter'], sf['value']))
-    end
-    @rec.append(field)
+    @rec.append(f)
+  } 
   end
 
   def sort_fields
@@ -754,13 +754,34 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       end
     end
 
+
+    
+    if thisconfig['flag overlay type']
+      if ri.overlay_type.size > 0
+        reced = MarcEdit.new(rec)
+        ri.overlay_type.each do |type|
+          reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
+        end
+      end
+    end
+    
     if thisconfig['add MARC field spec']
       reced = MarcEdit.new(rec)
       thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }        
     end
 
-    puts "\n\n#{rec}"
-    
+    if thisconfig['write warnings to recs']
+      if ri.warnings.size > 0
+        ri.warnings.each { |w|
+          reced = MarcEdit.new(rec)
+          reced.add_field_with_parameter(thisconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
+        }
+      end
+    end
+
+
+
+       
     rec = MarcEdit.new(rec).sort_fields
 
     if thisconfig['log warnings']
@@ -777,19 +798,6 @@ end
 
 
 
-#     if thisconfig['flag overlay type']
-#       if rec.overlay_point.size > 0
-#         ovtypes = []
-#         rec.overlay_point.each { |op| ovtypes << op.keys }
-#         ovtypes.flatten!
-#         ovtypes_x = []
-#         ovtypes.each { |type| ovtypes_x << "OVERLAY on #{type}"}
-#         ovtype = ovtypes_x.flatten.join(', ')
-#       else
-#         ovtype = 'NEW'
-#       end
-#       add_marc_var_fields_replacing_values(rec, thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>ovtype}])
-#     end
 
 #     if thisconfig['set record status by file diff']
 #       if rec.overlay_point.size > 0
@@ -856,22 +864,6 @@ end
 #       end
 #     end
 #   end
-
-#   if thisconfig['add MARC field spec']
-#     add_marc_var_fields(rec, thisconfig['add MARC field spec'])
-#   end
-
-#   if thisconfig['write warnings to recs']
-#     if rec.warnings.size > 0
-#       rec.warnings.each { |w|
-#         add_marc_var_fields_replacing_values(rec, thisconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
-#         if thisconfig['log warnings']
-#           log << [rec.source_file, rec[idtag].value, w]
-#         end
-#       }
-#     end
-#   end
-
 
 #   if thisconfig['incoming record output files']
 #     status = rec.diff_status
