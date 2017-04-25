@@ -114,6 +114,7 @@ workflows:
     set record status by file diff: true
     report record status counts on screen: true
     omit from comparison fields:
+      - tag: '001'
       - tag: '005'
       - tag: '019'
       - tag: '035'
