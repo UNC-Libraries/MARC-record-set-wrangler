@@ -710,7 +710,7 @@ end
 
 case thisconfig['ignore multiple overlays']
 when true
-  puts "\n\nWARNING. Will NOT check for multiple overlays.\n"
+  puts "\n\nWARNING. Will NOT check for multiple overlays. Analysis of whether record has changed will use first matching record only.\n"
 when false
   check_for_multiple_overlays(rec_info_sets)
 end
@@ -718,7 +718,6 @@ end
 #pp(in_rec_info)
 
 if thisconfig['set record status by file diff']
-  
   overlays = in_rec_info.find_all { |ri| ri.will_overlay.size > 0 }
   ov_main = overlays.find_all { |ri| ri.overlay_type.include?('main id') }
   ov_merge = overlays.find_all { |ri| ri.overlay_type.include?('merge id') }
