@@ -328,10 +328,10 @@ def get_rec_info(dir, label, rec_files)
   Dir.chdir(dir)
   infiles = Dir.glob('*.mrc')
   if infiles.size > 0
-    puts infiles
     infiles.each { |file|
       index = 0
       sourcefile = "#{dir}/#{file}"
+      puts "  - #{sourcefile}"
       rec_files << sourcefile
       MARC::Reader.new(file).each { |rec|
         recid = begin
@@ -530,6 +530,7 @@ end
 def setup_rec_access(filelist, rec_access)
   if filelist.size > 0
     filelist.each { |file|
+      puts "  - Working on access to: #{file}"
       index = 0
       rawhash = {}
       MARC::Reader.new(file).each_raw { |rec|
@@ -649,6 +650,7 @@ end
 
 if thisconfig['clean ids']
   # clean the script's internally used ids before working with them
+  puts "\n\nCleaning IDs in record info..."
   rec_info_sets.each { |set|
     set.each { |rec_info|
       rec_info.id = cleaner.clean(rec_info.id)
@@ -661,6 +663,7 @@ if thisconfig['clean ids']
   }
 end
 
+puts "\n\nSetting up access to individual MARC records on the fly..."
 setup_rec_access(rec_files, rec_access)
 
 # get record info hashes, indexed by 001 value, to work with
