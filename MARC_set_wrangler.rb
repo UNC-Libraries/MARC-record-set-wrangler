@@ -215,7 +215,7 @@ filestem = Dir.glob('*.mrc')[0].gsub!(/\.mrc/, '')
 Dir.chdir('..')
 writers = {}
 if thisconfig['incoming record output files']
-  writeconfig = thisconfig['incoming record output files'].delete_if { |k, v| v == 'do not output' }
+  writeconfig = thisconfig['incoming record output files'].dup.delete_if { |k, v| v == 'do not output' }
 else
   writers['default'] = MARC::Writer.new("#{out_dir}/#{filestem}_output.mrc")
   out_mrc = writers['default']
@@ -233,6 +233,12 @@ if thisconfig['overlay merged records']
   end
   unless thisconfig['use existing record set']
     abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'overlay merged records' = true, 'use existing record set' must be true.\n\n")
+  end
+end
+
+if thisconfig['report record status counts on screen']
+  unless thisconfig['set record status by file diff']
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'report record status counts on screen' = true, 'set record status by file diff' must be true. I can't report record status counts if I haven't figured out record statuses.\n\n")
   end
 end
 
@@ -313,14 +319,14 @@ if thisconfig['set record status by file diff']
   omission_spec = thisconfig['omit from comparison fields']
   omission_spec_sf = thisconfig['omit from comparison subfields']
 end
-  
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Define repeated procedures
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # Produces array of RecInfo structs from the MARC files in a directory
 def get_rec_info(dir, label)
-  puts "\n\nGetting record metadata from the following #{dir} files:"
+  puts "\n\nGathering record info from #{dir} files:"
   recinfos = []
   Dir.chdir(dir)
   infiles = Dir.glob('*.mrc')
@@ -494,23 +500,23 @@ class MarcEdit
   end
 
   def add_field_with_parameter(fspec, replaces)
-   fspec.each { |fs|
-    sfval = ''
-    f = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
-    fs['subfields'].each { |sfs|
-      sfval = sfs['value'].dup
-      if replaces.size > 0
-        replaces.each { |findrep|
-          findrep.each_pair { |fnd, rep|
-            sfval.gsub!(fnd, rep)
+    fspec.each { |fs|
+      sfval = ''
+      f = MARC::DataField.new(fs['tag'], fs['i1'], fs['i2'])
+      fs['subfields'].each { |sfs|
+        sfval = sfs['value'].dup
+        if replaces.size > 0
+          replaces.each { |findrep|
+            findrep.each_pair { |fnd, rep|
+              sfval.gsub!(fnd, rep)
+            }
           }
-        }
-      end
-      sf = MARC::Subfield.new(sfs['delimiter'], sfval)
-      f.append(sf)
-    }
-    @rec.append(f)
-  } 
+        end
+        sf = MARC::Subfield.new(sfs['delimiter'], sfval)
+        f.append(sf)
+      }
+      @rec.append(f)
+    } 
   end
 
   def sort_fields
@@ -634,7 +640,7 @@ end
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
-# Pull in our inpcoming and, if relevant, previously loaded MARC records
+# Pull in our incoming and, if relevant, previously loaded MARC records
 rec_info_sets = []
 in_rec_info = get_rec_info(in_dir, 'incoming')
 rec_info_sets << in_rec_info
@@ -684,14 +690,16 @@ end
 
 if thisconfig['use existing record set']
   # identify main id overlays
-  puts "\nChecking for overlays on main ID..."
+  puts "\n\nChecking for overlays on main ID..."
   in_info.each_pair { |id, in_ri|
     set_ovdata(id, in_ri, ex_info, 'main id')
   }
+  ov_main = in_rec_info.find_all { |ri| ri.overlay_type.include?('main id') }
+  print " found #{ov_main.size}"
 
   if thisconfig['overlay merged records']
     # identify merge id overlays
-    puts "\nChecking for overlays on merge ID..."
+    puts "\n\nChecking for overlays on merge ID..."
     in_info.each_pair { |id, in_ri|
       if in_ri.mergeids.size > 0
         in_ri.mergeids.each { |mid|
@@ -699,6 +707,8 @@ if thisconfig['use existing record set']
         }
       end
     }
+    ov_merge = in_rec_info.find_all { |ri| ri.overlay_type.include?('merge id') }
+    print " found #{ov_merge.size}"
   end
 end
 
@@ -707,27 +717,6 @@ when true
   puts "\n\nWARNING. Will NOT check for multiple overlays. Analysis of whether record has changed will use first matching record only.\n"
 when false
   check_for_multiple_overlays(rec_info_sets)
-end
-
-if thisconfig['set record status by file diff']
-  overlays = in_rec_info.find_all { |ri| ri.will_overlay.size > 0 }
-  ov_main = overlays.find_all { |ri| ri.overlay_type.include?('main id') }
-  ov_merge = overlays.find_all { |ri| ri.overlay_type.include?('merge id') }
-  news = in_rec_info.find_all { |ri| ri.will_overlay.size == 0 }
-
-  if thisconfig['report record status counts on screen']
-    puts "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-    puts "RESULTS"
-    puts "#{overlays.size} overlays (#{ov_main.size} on main id, #{ov_merge.size} on merge id)" 
-    puts "#{news.size} news"
-  end
-end
-
-if thisconfig['produce delete file']
-  deletes = ex_rec_info.find_all { |ri| ri.will_be_overlaid_by.size == 0 }
-  if thisconfig['report delete count on screen']
-    puts "#{deletes.size} deletes"
-  end
 end
 
 # process each incoming record
@@ -758,7 +747,9 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         ri.diff_status = 'NEW'
       end
     end
-
+    
+    next if ri.diff_status == 'STATIC' && thisconfig['incoming record output files']['STATIC'] == 'do not output'
+    
     if thisconfig['flag AC recs with changed headings']
       if ri.ovdata.size > 0
         ac_new = get_fields_by_spec(rec, ac_fields).map { |f| f.to_s }
@@ -810,35 +801,35 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       this_replace = [{'[RECORDSTATUS]'=>ri.diff_status}]
       reced.add_field_with_parameter(this_spec, this_replace)
     end
-  
-  if thisconfig['flag overlay type']
-    if ri.overlay_type.size > 0
-      reced = MarcEdit.new(rec)
-      ri.overlay_type.each do |type|
-        reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
+    
+    if thisconfig['flag overlay type']
+      if ri.overlay_type.size > 0
+        reced = MarcEdit.new(rec)
+        ri.overlay_type.each do |type|
+          reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
+        end
       end
     end
-  end
 
-  if ri.ac_changed
-    ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
-  end
-  
-  case ri.under_ac
-  when true
-    if thisconfig['add AC MARC fields']
-      reced = MarcEdit.new(rec)
-      thisconfig['add AC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+    if ri.ac_changed
+      ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
     end
-  when false
-    if thisconfig['add noAC MARC fields']
-      thisconfig['add noAC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+    
+    case ri.under_ac
+    when true
+      if thisconfig['add AC MARC fields']
+        reced = MarcEdit.new(rec)
+        thisconfig['add AC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+      end
+    when false
+      if thisconfig['add noAC MARC fields']
+        thisconfig['add noAC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+      end
     end
-  end
 
-  if thisconfig['add MARC field spec']
-    thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
-  end
+    if thisconfig['add MARC field spec']
+      thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
+    end
 
     if thisconfig['write warnings to recs']
       if ri.warnings.size > 0
@@ -878,27 +869,44 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
   end
 end
 
-if thisconfig['produce delete file'] && deletes.size > 0
-  dwriter = MARC::Writer.new("#{out_dir}/#{filestem}_deletes.mrc")
+if thisconfig['report record status counts on screen']
+    puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+    puts "RESULTS"
 
-  deletes.group_by { |ri| ri.sourcefile }.each do |sourcefile, ri_set|
-    del_rec_lookup = PstoreMarcRetriever.new(sourcefile, rec_access)
-    ri_set.each do |ri|
-      del_rec = del_rec_lookup.get(ri.index)
+    in_rec_info.group_by { |ri| ri.diff_status }.each_pair do |k, v|
+      puts "#{v.size} #{k} record(s)"
+    end
+end
 
-      if thisconfig['clean ids']
-        del_rec = cleaner.clean_record(del_rec, idfields)
+if thisconfig['produce delete file']
+  deletes = ex_rec_info.find_all { |ri| ri.will_be_overlaid_by.size == 0 }
+
+  if deletes.size > 0
+    dwriter = MARC::Writer.new("#{out_dir}/#{filestem}_deletes.mrc")
+
+    deletes.group_by { |ri| ri.sourcefile }.each do |sourcefile, ri_set|
+      del_rec_lookup = PstoreMarcRetriever.new(sourcefile, rec_access)
+      ri_set.each do |ri|
+        del_rec = del_rec_lookup.get(ri.index)
+
+        if thisconfig['clean ids']
+          del_rec = cleaner.clean_record(del_rec, idfields)
+        end
+
+        if thisconfig['use id affix']
+          del_rec = affix_handler.add_to_record(del_rec, idfields)
+        end
+
+        dwriter.write(del_rec)
       end
-
-      if thisconfig['use id affix']
-        del_rec = affix_handler.add_to_record(del_rec, idfields)
-      end
-
-      dwriter.write(del_rec)
     end
   end
 
   dwriter.close
+
+  if thisconfig['report delete count on screen']
+    puts "#{deletes.size} deletes"
+  end
 end
 
 if thisconfig['log warnings']
