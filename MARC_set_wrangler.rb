@@ -95,8 +95,8 @@ class RecordInfo
   attr_accessor :ovdata
   attr_accessor :overlay_type
   attr_accessor :under_ac
-  attr_accessor :changed_fields
   attr_accessor :diff_status
+  attr_accessor :ac_changed
 
   def initialize(id)
     @id = id
@@ -290,10 +290,6 @@ if thisconfig['flag AC recs with changed headings']
     ac_changes_spec = thisconfig['changed heading MARC spec']
   else
     abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'flag AC recs with changed headings' = true, 'changed heading MARC spec' must be configured. I need to know what field(s) to add if the headings have changed.\n\n")
-  end
-  
-  if thisconfig['omit from AC fields subfields']
-    ac_subfield_omissions = thisconfig['omit from AC fields subfields']
   end
 end
 
@@ -744,22 +740,37 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
   riset.each do |ri|
     rec = reclookup.get(ri.index)
 
-    if thisconfig['set record status by file diff']
+    if thisconfig['use existing record set']
       if ri.ovdata.size > 0
         ex_ri = ri.ovdata[0]
         exrec = PstoreMarcRetriever.new(ex_ri.sourcefile, rec_access).get(ex_ri.index)
-
+      end
+    end
+    
+    if thisconfig['set record status by file diff']
+      if ri.ovdata.size > 0
         compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf)
         compold = get_fields_for_comparison(exrec, omission_spec, omission_spec_sf)
-        
-        ri.changed_fields = ( compnew - compold ) + ( compold - compnew )
-        if ri.changed_fields.size > 0
+        changed_fields = ( compnew - compold ) + ( compold - compnew )
+
+        if changed_fields.size > 0
           ri.diff_status = 'CHANGE'
         else
           ri.diff_status = 'STATIC'
         end
       else
         ri.diff_status = 'NEW'
+      end
+    end
+
+    if thisconfig['flag AC recs with changed headings']
+      if ri.ovdata.size > 0
+        ac_new = get_fields_by_spec(rec, ac_fields).map { |f| f.to_s }
+        ac_old = get_fields_by_spec(exrec, ac_fields).map { |f| f.to_s }
+        changed_headings = (ac_new - ac_old) + (ac_old - ac_new)
+        if changed_headings.size > 0
+          ri.ac_changed = true
+        end
       end
     end
     
@@ -813,6 +824,10 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
     end
   end
 
+  if ri.ac_changed
+    ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
+  end
+  
   case ri.under_ac
   when true
     if thisconfig['add AC MARC fields']
@@ -838,102 +853,53 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       end
     end
 
-
-
-       
     rec = MarcEdit.new(rec).sort_fields
 
+    if thisconfig['incoming record output files']
+      status = ri.diff_status
+      if writers.has_key?(status)
+        writers[status].write(rec)
+      elsif writeconfig.has_key?(status)
+        writers[status] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
+        writers[status].write(rec)
+      else
+        next
+      end
+    else
+      out_mrc.write(rec)
+    end
+    
     if thisconfig['log warnings']
       ri.warnings.each { |w| log << [ri.sourcefile, ri.id, w] }
     end
     
-    puts "\n#{rec}"
+    #puts "\n#{rec}"
     #pp(ri)
-
-
   end
 end
 
+if thisconfig['produce delete file'] && deletes.size > 0
+  dwriter = MARC::Writer.new("#{out_dir}/#{filestem}_deletes.mrc")
 
+  deletes.group_by { |ri| ri.sourcefile }.each do |sourcefile, ri_set|
+    del_rec_lookup = PstoreMarcRetriever.new(sourcefile, rec_access)
+    ri_set.each do |ri|
+      del_rec = del_rec_lookup.get(ri.index)
 
+      if thisconfig['clean ids']
+        del_rec = cleaner.clean_record(del_rec, idfields)
+      end
 
+      if thisconfig['use id affix']
+        del_rec = affix_handler.add_to_record(del_rec, idfields)
+      end
 
+      dwriter.write(del_rec)
+    end
+  end
 
-
-
-
-#   if thisconfig['flag AC recs with changed headings']
-#     if rec.overlay_point.size > 0
-#       ac_spec = thisconfig['fields under AC']
-#       ac_spec_omit_sfs = thisconfig['omit from AC fields subfields']
-#       ac_new = get_fields_by_spec(rec, ac_spec).map { |f| f.to_s }
-#       old_rec_id = rec.overlay_point[0].values[0]
-#       ac_old = get_fields_by_spec(ex_ids[old_rec_id], ac_spec).map { |f| f.to_s }
-#       ac_new.sort!
-#       ac_old.sort!
-#       rec.changed_ac_fields = ac_new - ac_old
-#       if rec.changed_ac_fields.size > 0
-#         if thisconfig['changed heading MARC spec']
-#           add_marc_var_fields(rec, thisconfig['changed heading MARC spec'])
-#         else
-#           raise StandardError, "You need to define 'changed heading MARC spec' in config" 
-#         end
-#       end
-#     end
-#   end
-
-
-
-#   if thisconfig['incoming record output files']
-#     status = rec.diff_status
-#     if writers.has_key?(status)
-#       writers[status].write(rec)
-#     elsif writeconfig.has_key?(status)
-#       writers[status] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
-#       writers[status].write(rec)
-#     else
-#       next
-#     end
-#   else
-#     out_mrc.write(rec)
-#   end
-# }
-
-# end process each incoming record
-
-# if thisconfig['report record status counts on screen']
-#   puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-#   puts "Record status counts"
-#   puts "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-#   mynew = in_mrc.select { |r| r.diff_status == 'NEW' }
-#   mychange = in_mrc.select { |r| r.diff_status == 'CHANGE' }
-#   mystatic = in_mrc.select { |r| r.diff_status == 'STATIC' }
-#   puts "#{mynew.size} new -- #{mychange.size} change -- #{mystatic.size} static"
-# end
-
-# if thisconfig['produce delete file']
-#   deletes = ex_ids.keep_if { |recid, rec| rec.overlay_point.size == 0 }
-#   if deletes.size > 0
-#     dwriter = MARC::Writer.new("#{out_dir}/#{filestem}_deletes.mrc")
-#     deletes.each_value { |rec|
-#       if thisconfig['use id affix']
-#         myfix = thisconfig['id affix value']
-#         unless myfix == ''
-#           if thisconfig['affix type'] == 'suffix'
-#             rec[idtag].value += myfix
-#           elsif thisconfig['affix type'] == 'prefix'
-#             rec[idtag].value = myfix + rec[idtag].value
-#           else
-#             raise ArgumentError, "'affix type' option in config.yaml must be either 'prefix' or 'suffix'" 
-#           end
-#         end
-#       end
-#       dwriter.write(rec)
-#     }
-#     dwriter.close
-#   end
-#   puts "#{deletes.size} delete" if thisconfig['report delete count on screen']
-# end
+  dwriter.close
+end
 
 if thisconfig['log warnings']
   log.close
