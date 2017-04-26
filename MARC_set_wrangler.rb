@@ -877,7 +877,7 @@ if thisconfig['log warnings']
   end
 end
 
-puts "Cleaning up..."
+
 if thisconfig['incoming record output files']
   writer_list = writers.keys
   writer_list.each { |w| writers[w].close }
@@ -885,6 +885,8 @@ else
   out_mrc.close
 end 
 
+puts "\n\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\nAll important work is done! It's safe to use the files in the output directory now.\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n"
+puts "It's going to take me a while to finish cleaning up my working files, though..."
 ObjectSpace.each_object(IO) {|x| x.close }
 
 #FileUtils.remove_dir('working', force = true)
