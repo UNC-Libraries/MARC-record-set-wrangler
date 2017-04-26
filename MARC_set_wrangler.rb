@@ -7,6 +7,7 @@ require 'marc'
 require 'marc_record'
 require 'highline/import'
 require 'pp'
+require 'fileutils'
 
 puts "\n\n"
 
@@ -85,6 +86,7 @@ class RecordInfo
   attr_accessor :id
   attr_accessor :mergeids
   attr_accessor :sourcefile
+  attr_accessor :lookupfile
   attr_accessor :outfile
   attr_accessor :warnings
   attr_accessor :ovdata
@@ -202,6 +204,7 @@ end
 in_dir = 'incoming_marc'
 ex_dir = 'existing_marc'
 out_dir = 'output'
+wrk_dir = 'working'
 
 # Set up MARC writers
 Dir.chdir(in_dir)
@@ -322,8 +325,8 @@ end
 def get_rec_info(dir, label)
   puts "\n\nGathering record info from #{dir} files:"
   recinfos = []
-  Dir.chdir(dir)
-  infiles = Dir.glob('*.mrc')
+  rec_increment = 1
+  infiles = Dir.glob("#{dir}/*.mrc")
   if infiles.size > 0
     infiles.each { |file|
       sourcefile = "#{dir}/#{file}"
@@ -337,6 +340,12 @@ def get_rec_info(dir, label)
         case label
         when 'existing'
           ri = ExistingRecordInfo.new(id)
+          mypath = "working/#{rec_increment}.mrc"
+          writer = MARC::Writer.new(mypath)
+          writer.write(rec)
+          writer.close
+          ri.lookupfile = mypath
+          rec_increment += 1
         when 'incoming'
           ri = IncomingRecordInfo.new(id)
         else
@@ -348,7 +357,6 @@ def get_rec_info(dir, label)
       }
     }
     puts "There are #{recinfos.size} #{label} records."
-    Dir.chdir('..')
     return recinfos
   else
     abort("\n\nSCRIPT FAILURE!:\nNo #{label} .mrc files found in #{dir}.\n\n")
@@ -676,7 +684,8 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['use existing record set']
       if ri.ovdata.size > 0
         ex_ri = ri.ovdata[0]
-        exrec = :FIXME
+        reader = MARC::Reader.new(ex_ri.lookupfile) 
+        exrec = reader.first
       end
     end
     
@@ -834,7 +843,8 @@ if thisconfig['produce delete file']
 
     deletes.group_by { |ri| ri.sourcefile }.each do |sourcefile, ri_set|
       ri_set.each do |ri|
-        del_rec = :FIXME
+        reader = MARC::Reader.new(ri.lookupfile)
+        del_rec = reader.first
 
         if thisconfig['clean ids']
           del_rec = cleaner.clean_record(del_rec, idfields)
@@ -867,6 +877,7 @@ if thisconfig['log warnings']
   end
 end
 
+puts "Cleaning up..."
 if thisconfig['incoming record output files']
   writer_list = writers.keys
   writer_list.each { |w| writers[w].close }
@@ -874,4 +885,8 @@ else
   out_mrc.close
 end 
 
-puts "\nDone!\n\n"
+ObjectSpace.each_object(IO) {|x| x.close }
+
+#FileUtils.remove_dir('working', force = true)
+FileUtils.rm Dir.glob('working/*.mrc'), :force => true
+#puts "\nDone!\n\n"
