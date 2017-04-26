@@ -279,6 +279,24 @@ if thisconfig['elvl sets AC status']
   end
 end
 
+if thisconfig['flag AC recs with changed headings']
+  if thisconfig['fields under AC']
+    ac_fields = thisconfig['fields under AC']
+  else
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'flag AC recs with changed headings' = true, 'fields under AC' must be configured. I need to know what fields to compare in order to flag the records.\n\n")
+  end
+
+  if thisconfig['changed heading MARC spec']
+    ac_changes_spec = thisconfig['changed heading MARC spec']
+  else
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'flag AC recs with changed headings' = true, 'changed heading MARC spec' must be configured. I need to know what field(s) to add if the headings have changed.\n\n")
+  end
+  
+  if thisconfig['omit from AC fields subfields']
+    ac_subfield_omissions = thisconfig['omit from AC fields subfields']
+  end
+end
+
 # Set affix if it's going to be used, otherwise it is blank string
 if thisconfig['use id affix']
   if idfields.size > 0
