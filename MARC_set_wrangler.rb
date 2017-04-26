@@ -7,7 +7,6 @@ require 'marc'
 require 'marc_record'
 require 'highline/import'
 require 'pp'
-require 'pstore'
 
 puts "\n\n"
 
@@ -80,7 +79,6 @@ idfields << thisconfig['merge id'] if thisconfig['merge id']
 #  :id = String 001 value
 #  :mergeids = Array of 019$a values
 #  :sourcefile = String the path to the .mrc file the record is in
-#  :index = Integer position of record in its sourcefile
 #  :warnings = Array warning messages associated with record
 #  :overlay_type = Array of elements which may be either 'main id' or 'merge id'
 class RecordInfo
@@ -88,7 +86,6 @@ class RecordInfo
   attr_accessor :mergeids
   attr_accessor :sourcefile
   attr_accessor :outfile
-  attr_accessor :index
   attr_accessor :warnings
   attr_accessor :ovdata
   attr_accessor :overlay_type
@@ -205,9 +202,6 @@ end
 in_dir = 'incoming_marc'
 ex_dir = 'existing_marc'
 out_dir = 'output'
-
-# Set up Pstore document for temp record storage/access
-rec_access = PStore.new('rec_access.pstore')
 
 # Set up MARC writers
 Dir.chdir(in_dir)
@@ -332,7 +326,6 @@ def get_rec_info(dir, label)
   infiles = Dir.glob('*.mrc')
   if infiles.size > 0
     infiles.each { |file|
-      index = 0
       sourcefile = "#{dir}/#{file}"
       puts "  - #{sourcefile}"
       MARC::Reader.new(file).each { |rec|
@@ -351,9 +344,7 @@ def get_rec_info(dir, label)
         end
         ri.mergeids = rec.get_019_vals
         ri.sourcefile = sourcefile
-        ri.index = index
         recinfos << ri
-        index += 1
       }
     }
     puts "There are #{recinfos.size} #{label} records."
@@ -529,23 +520,6 @@ class MarcEdit
   end
 end
 
-def setup_rec_access(filelist, rec_access)
-  if filelist.size > 0
-    filelist.each { |file|
-      puts "  - Working on access to: #{file}"
-      index = 0
-      rawhash = {}
-      MARC::Reader.new(file).each_raw { |rec|
-        rawhash[index] = rec
-        index += 1
-      }
-      rec_access.transaction {
-        rec_access[file] = rawhash
-      }
-    }
-  end
-end
-
 def check_for_multiple_overlays(sets)
   errs = []
   sets.each { |set|
@@ -575,25 +549,6 @@ def check_for_multiple_overlays(sets)
     errs.each { |e| puts e }
     puts "Please either resolve these issues, or set 'ignore multiple overlays: true' in your config.yaml, and re-run the script\n\n"
     abort
-  end
-end
-
-class PstoreMarcRetriever
-  attr_accessor :sourcefile
-  attr_accessor :pstorefile
-  attr_accessor :marchash
-
-  def initialize(sourcefile, pstorefile)
-    @sourcefile = sourcefile
-    @pstorefile = pstorefile
-    @pstorefile.transaction {
-      @marchash = @pstorefile[@sourcefile]
-    }
-  end
-
-  def get(index)
-    raw = @marchash[index]
-    MARC::Reader.decode(raw)
   end
 end
 
@@ -665,13 +620,6 @@ if thisconfig['clean ids']
   }
 end
 
-if thisconfig['use existing record set']
-  puts "\n\nSetting up access to individual existing MARC records on the fly..."
-  exfiles = Dir.glob("#{ex_dir}/*.mrc")
-  setup_rec_access(exfiles, rec_access)
-  puts "Finished setting up access to individual MARC records on the fly."
-end
-
 # get record info hashes, indexed by 001 value, to work with
 if thisconfig['use existing record set']
   ex_info = make_rec_info_hash(ex_rec_info)
@@ -728,7 +676,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['use existing record set']
       if ri.ovdata.size > 0
         ex_ri = ri.ovdata[0]
-        exrec = PstoreMarcRetriever.new(ex_ri.sourcefile, rec_access).get(ex_ri.index)
+        exrec = :FIXME
       end
     end
     
@@ -885,9 +833,8 @@ if thisconfig['produce delete file']
     dwriter = MARC::Writer.new("#{out_dir}/#{filestem}_deletes.mrc")
 
     deletes.group_by { |ri| ri.sourcefile }.each do |sourcefile, ri_set|
-      del_rec_lookup = PstoreMarcRetriever.new(sourcefile, rec_access)
       ri_set.each do |ri|
-        del_rec = del_rec_lookup.get(ri.index)
+        del_rec = :FIXME
 
         if thisconfig['clean ids']
           del_rec = cleaner.clean_record(del_rec, idfields)
@@ -926,7 +873,5 @@ if thisconfig['incoming record output files']
 else
   out_mrc.close
 end 
-
-File.delete('rec_access.pstore')
 
 puts "\nDone!\n\n"
