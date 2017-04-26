@@ -1,4 +1,6 @@
 # MARC Record Set Wrangler
+**May fail with memory allocation errors if you are wanting to compare incoming vs. existing record sets and the files are very large (like 30,000 records). If you run into this problem, try the version at https://github.com/UNC-Libraries/MARC-record-set-wrangler/tree/split-ex-marc --- It should work, but it is VERY SLOW. I'm working on speeding this up.**
+
 Based on options you can set at the institution, workflow, or collection level, this tool allows you to do things like:
 
 - Clean up the ID field(s) in incoming records
