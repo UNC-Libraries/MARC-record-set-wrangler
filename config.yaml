@@ -108,7 +108,7 @@ workflows:
     id affix value: 'wcm'
     use existing record set: true
     overlay merged records: true
-    ignore multiple overlays: true
+    ignore multiple overlays: false
     manipulate 019 for overlay: true
     flag overlay type: true
     set record status by file diff: true
