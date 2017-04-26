@@ -3,6 +3,10 @@ require 'json'
 
 module MARC
 
+  class Writer
+    attr_reader :fh
+  end
+  
   class Record
     include Comparable
     attr_accessor :warnings

@@ -90,6 +90,7 @@ class RecordInfo
   attr_accessor :id
   attr_accessor :mergeids
   attr_accessor :sourcefile
+  attr_accessor :outfile
   attr_accessor :index
   attr_accessor :warnings
   attr_accessor :ovdata
@@ -221,12 +222,6 @@ if thisconfig['incoming record output files']
 else
   writers['default'] = MARC::Writer.new("#{out_dir}/#{filestem}_output.mrc")
   out_mrc = writers['default']
-end
-
-# Set up logging, if specified
-if thisconfig['log warnings']
-  log = CSV.open("#{out_dir}/#{filestem}_log.csv", "wb")
-  log << ['filename', 'rec id', 'warning']
 end
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -859,18 +854,22 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       status = ri.diff_status
       if writers.has_key?(status)
         writers[status].write(rec)
+        ri.outfile = writers[status].fh.path
       elsif writeconfig.has_key?(status)
         writers[status] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
         writers[status].write(rec)
+        ri.outfile = writers[status].fh.path
       else
+        ri.outfile = "not output"
         next
       end
     else
       out_mrc.write(rec)
+      ri.outfile = out_mrc.fh.path
     end
     
     if thisconfig['log warnings']
-      ri.warnings.each { |w| log << [ri.sourcefile, ri.id, w] }
+      ri.warnings.map! { |w| [ri.sourcefile, ri.outfile, ri.id, w] }
     end
     
     #puts "\n#{rec}"
@@ -902,17 +901,23 @@ if thisconfig['produce delete file'] && deletes.size > 0
 end
 
 if thisconfig['log warnings']
-  log.close
-  logname = "#{out_dir}/#{filestem}_log.csv"
-  line_count = `wc -l "#{logname}"`.strip.split(' ')[0].to_i
-  File.delete(logname) if line_count == 1
+  all_warnings = in_rec_info.map { |ri| ri.warnings if ri.warnings.size > 0 }.compact.flatten(1)
+  if all_warnings.size > 0
+    logpath = "#{out_dir}/#{filestem}_log.csv"
+    log = CSV.open(logpath, "wb")
+    log << ['source file', 'output file', 'rec id', 'warning']
+    all_warnings.each { |w| log << w }
+    log.close
+  end
 end
 
-# if thisconfig['incoming record output files']
-#   writer_list = writers.keys
-#   writer_list.each { |w| writers[w].close }
-# else
-#   out_mrc.close
-# end 
+if thisconfig['incoming record output files']
+  writer_list = writers.keys
+  writer_list.each { |w| writers[w].close }
+else
+  out_mrc.close
+end 
 
-# puts "\nDone!\n\n"
+File.delete('rec_access.pstore')
+
+puts "\nDone!\n\n"
