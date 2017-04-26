@@ -132,7 +132,7 @@ workflows:
     flag rec status: true
     incoming record output files:
       CHANGE: '_change'
-      STATIC: 'do not output'
+      STATIC: '_static'
       NEW: '_add'
     produce delete file: true
     report delete count on screen: true
