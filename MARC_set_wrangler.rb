@@ -74,9 +74,6 @@ idfields = []
 idfields << thisconfig['main id'] if thisconfig['main id']
 idfields << thisconfig['merge id'] if thisconfig['merge id']
 
-# list of filepaths (incoming and existing)
-rec_files = []
-
 # RecordInfo holds basic data about MARC records needed for matching ids and
 #  other processing, as well as efficiently retrieving the full MARC record
 #  from its file for processing
@@ -322,7 +319,7 @@ end
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # Produces array of RecInfo structs from the MARC files in a directory
-def get_rec_info(dir, label, rec_files)
+def get_rec_info(dir, label)
   puts "\n\nGetting record metadata from the following #{dir} files:"
   recinfos = []
   Dir.chdir(dir)
@@ -332,7 +329,6 @@ def get_rec_info(dir, label, rec_files)
       index = 0
       sourcefile = "#{dir}/#{file}"
       puts "  - #{sourcefile}"
-      rec_files << sourcefile
       MARC::Reader.new(file).each { |rec|
         recid = begin
                   id = rec['001'].value.dup
@@ -640,11 +636,11 @@ end
 
 # Pull in our inpcoming and, if relevant, previously loaded MARC records
 rec_info_sets = []
-in_rec_info = get_rec_info(in_dir, 'incoming', rec_files)
+in_rec_info = get_rec_info(in_dir, 'incoming')
 rec_info_sets << in_rec_info
 
 if thisconfig['use existing record set']
-  ex_rec_info = get_rec_info(ex_dir, 'existing', rec_files)
+  ex_rec_info = get_rec_info(ex_dir, 'existing')
   rec_info_sets << ex_rec_info
 end
 
@@ -663,8 +659,12 @@ if thisconfig['clean ids']
   }
 end
 
-puts "\n\nSetting up access to individual MARC records on the fly..."
-setup_rec_access(rec_files, rec_access)
+if thisconfig['use existing record set']
+  puts "\n\nSetting up access to individual existing MARC records on the fly..."
+  exfiles = Dir.glob("#{ex_dir}/*.mrc")
+  setup_rec_access(exfiles, rec_access)
+  puts "Finished setting up access to individual MARC records on the fly."
+end
 
 # get record info hashes, indexed by 001 value, to work with
 if thisconfig['use existing record set']
@@ -709,8 +709,6 @@ when false
   check_for_multiple_overlays(rec_info_sets)
 end
 
-#pp(in_rec_info)
-
 if thisconfig['set record status by file diff']
   overlays = in_rec_info.find_all { |ri| ri.will_overlay.size > 0 }
   ov_main = overlays.find_all { |ri| ri.overlay_type.include?('main id') }
@@ -733,10 +731,10 @@ if thisconfig['produce delete file']
 end
 
 # process each incoming record
-in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
-  reclookup = PstoreMarcRetriever.new(sourcefile, rec_access)
-  riset.each do |ri|
-    rec = reclookup.get(ri.index)
+Dir.glob("#{in_dir}/*.mrc").each do |in_file|
+  MARC::Reader.new(in_file).each do |rec|
+    id_val = cleaner.clean(rec['001'].value.dup)
+    ri = in_info[id_val]
 
     if thisconfig['use existing record set']
       if ri.ovdata.size > 0
@@ -794,16 +792,16 @@ in_rec_info.group_by { |ri| ri.sourcefile }.each do |sourcefile, riset|
       end
     end
 
+    if thisconfig['overlay merged records']
+      rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
+    end
+    
     if thisconfig['clean ids']
       rec = cleaner.clean_record(rec, idfields)
     end
 
     if thisconfig['use id affix']
       rec = affix_handler.add_to_record(rec, idfields)
-    end
-    
-    if thisconfig['overlay merged records']
-      rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
     end
 
     if thisconfig['flag rec status']
