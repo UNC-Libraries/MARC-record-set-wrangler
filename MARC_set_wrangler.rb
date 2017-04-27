@@ -517,11 +517,13 @@ class MarcEdit
   end
 
   def sort_fields
+    old_ldr = @rec.leader
     field_hash = @rec.group_by { |field| field.tag }
     newrec = MARC::Record.new()
     field_hash.keys.sort!.each do |tag|
       field_hash[tag].each { |f| newrec.append(f) }
     end
+    newrec.leader = old_ldr
     @rec = newrec
     @rec
   end
