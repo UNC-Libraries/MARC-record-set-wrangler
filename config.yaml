@@ -432,7 +432,7 @@ collections:
           - delimiter: 'u'
             value: '-'
   WCM - CUP:
-    id affix value: 'CUP'
+    id affix value: 'cup'
     add MARC field spec:
       - tag: '773'
         i1: '1'
