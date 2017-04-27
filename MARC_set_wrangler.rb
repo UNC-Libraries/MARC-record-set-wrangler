@@ -522,7 +522,8 @@ class MarcEdit
     field_hash.keys.sort!.each do |tag|
       field_hash[tag].each { |f| newrec.append(f) }
     end
-    newrec
+    @rec = newrec
+    @rec
   end
 end
 
@@ -759,7 +760,6 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     
     if thisconfig['flag overlay type']
       if ri.overlay_type.size > 0
-        reced = MarcEdit.new(rec)
         ri.overlay_type.each do |type|
           reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
         end
@@ -794,7 +794,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       end
     end
 
-    reced.sort_fields
+    rec = reced.sort_fields
 
     if thisconfig['incoming record output files']
       status = ri.diff_status
