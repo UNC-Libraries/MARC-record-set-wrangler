@@ -432,6 +432,9 @@ collections:
           - delimiter: 'u'
             value: '-'
   WCM - CUP:
+    clean ids:
+      - find: 'wcmcup'
+        replace: ''
     id affix value: 'cup'
     add MARC field spec:
       - tag: '773'
