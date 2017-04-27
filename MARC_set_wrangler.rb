@@ -207,9 +207,7 @@ out_dir = 'output'
 wrk_dir = 'working'
 
 # Set up MARC writers
-Dir.chdir(in_dir)
-filestem = Dir.glob('*.mrc')[0].gsub!(/\.mrc/, '')
-Dir.chdir('..')
+filestem = Dir.glob("#{in_dir}/*.mrc")[0].gsub!(/^.*\//, '').gsub!(/\.mrc/, '')
 writers = {}
 if thisconfig['incoming record output files']
   writeconfig = thisconfig['incoming record output files'].dup.delete_if { |k, v| v == 'do not output' }
@@ -791,23 +789,22 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['write warnings to recs']
       if ri.warnings.size > 0
         ri.warnings.each { |w|
-          reced = MarcEdit.new(rec)
           reced.add_field_with_parameter(thisconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
         }
       end
     end
 
-    rec = MarcEdit.new(rec).sort_fields
+    reced.sort_fields
 
     if thisconfig['incoming record output files']
       status = ri.diff_status
-      if writers.has_key?(status)
-        writers[status].write(rec)
-        ri.outfile = writers[status].fh.path
+      if writers.has_key?(writeconfig[status])
+        writers[writeconfig[status]].write(rec)
+        ri.outfile = writers[writeconfig[status]].fh.path
       elsif writeconfig.has_key?(status)
-        writers[status] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
-        writers[status].write(rec)
-        ri.outfile = writers[status].fh.path
+        writers[writeconfig[status]] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
+        writers[writeconfig[status]].write(rec)
+        ri.outfile = writers[writeconfig[status]].fh.path
       else
         ri.outfile = "not output"
         next
