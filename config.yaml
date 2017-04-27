@@ -131,9 +131,9 @@ workflows:
       '040': 'cd'
     flag rec status: true
     incoming record output files:
-      CHANGE: '_change'
+      CHANGE: '_prep_for_load'
       STATIC: 'do not output'
-      NEW: '_add'
+      NEW: '_prep_for_load'
     produce delete file: true
     report delete count on screen: true
     elvl sets AC status: true
