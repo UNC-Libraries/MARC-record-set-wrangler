@@ -857,9 +857,10 @@ if thisconfig['produce delete file']
         dwriter.write(del_rec)
       end
     end
+    dwriter.close
   end
 
-  dwriter.close
+  
 
   if thisconfig['report delete count on screen']
     puts "#{deletes.size} deletes"
