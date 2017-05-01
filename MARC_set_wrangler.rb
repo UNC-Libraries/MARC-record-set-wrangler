@@ -304,10 +304,12 @@ end
 # NOTE: Since we are comparing original files below, we don't need to add id suffixes
 #  until we output the processed records.
 
-if thisconfig['clean ids'] && idfields.size > 0
-  cleaner = IdCleaner.new(thisconfig['clean ids'])
-else
-  abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'clean ids' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
+if thisconfig['clean ids']
+  if idfields.size > 0
+    cleaner = IdCleaner.new(thisconfig['clean ids'])
+  else
+    abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'clean ids' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
+  end
 end
 
 if thisconfig['set record status by file diff']
@@ -679,7 +681,11 @@ end
 # process each incoming record
 Dir.glob("#{in_dir}/*.mrc").each do |in_file|
   MARC::Reader.new(in_file).each do |rec|
-    id_val = cleaner.clean(rec['001'].value.dup)
+    if cleaner
+      id_val = cleaner.clean(rec['001'].value.dup)
+    else
+      id_val = rec['001'].value.dup
+    end
     ri = in_info[id_val]
 
     if thisconfig['use existing record set']
