@@ -747,6 +747,9 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       end
     end
 
+    # start actually editing records
+    reced = MarcEdit.new(rec)
+    
     if thisconfig['overlay merged records']
       rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
     end
@@ -760,7 +763,6 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     end
 
     if thisconfig['flag rec status']
-      reced = MarcEdit.new(rec)
       this_spec = thisconfig['rec status flag spec']
       this_replace = [{'[RECORDSTATUS]'=>ri.diff_status}]
       reced.add_field_with_parameter(this_spec, this_replace)
