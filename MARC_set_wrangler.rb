@@ -452,13 +452,14 @@ end
 def get_fields_for_comparison(rec, omitfspec, omitsfspec)
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
-  tags_w_sf_omissions = omitsfspec.keys
+  tags_w_sf_omissions = omitsfspec.keys if omitsfspec
   compare = []
   to_compare.each { |cf|
     if cf.class.name == 'MARC::ControlField'
       compare << cf
     else
-      if tags_w_sf_omissions.include?(cf.tag)
+      if omitsfspec
+        if tags_w_sf_omissions.include?(cf.tag)
         sfs_to_omit = omitsfspec[cf.tag].chars
         newfield = MARC::DataField.new(cf.tag, cf.indicator1, cf.indicator2)
         cf.subfields.each { |sf|
@@ -470,6 +471,7 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec)
         compare << newfield
       else
         compare << cf
+        end
       end
     end
   }
@@ -712,7 +714,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       end
     end
     
-    next if ri.diff_status == 'STATIC' && thisconfig['incoming record output files']['STATIC'] == 'do not output'
+    if ri.diff_status == 'STATIC'
+      if thisconfig['incoming record output files']
+        next if thisconfig['incoming record output files']['STATIC'] == 'do not output'
+      end
+    end
     
     if thisconfig['flag AC recs with changed headings']
       if ri.ovdata.size > 0
@@ -866,13 +872,12 @@ if thisconfig['produce delete file']
     end
     dwriter.close
   end
-
-  
+end
 
   if thisconfig['report delete count on screen']
+    deletes = ex_rec_info.find_all { |ri| ri.will_be_overlaid_by.size == 0 } if deletes == nil
     puts "#{deletes.size} deletes"
   end
-end
 
 if thisconfig['log warnings']
   all_warnings = in_rec_info.map { |ri| ri.warnings if ri.warnings.size > 0 }.compact.flatten(1)
