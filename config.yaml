@@ -20,7 +20,7 @@ institution:
       subfields:
         - delimiter: 'a'
           value: 'WARNING'
-        - delimter: 'b'
+        - delimiter: 'b'
           value: '[WARNINGTEXT]'
   rec status flag spec:
     - tag: '999'
@@ -108,11 +108,13 @@ workflows:
     id affix value: 'wcm'
     use existing record set: true
     overlay merged records: true
+    ignore multiple overlays: false
     manipulate 019 for overlay: true
     flag overlay type: true
     set record status by file diff: true
     report record status counts on screen: true
     omit from comparison fields:
+      - tag: '001'
       - tag: '005'
       - tag: '019'
       - tag: '035'
@@ -129,9 +131,9 @@ workflows:
       '040': 'cd'
     flag rec status: true
     incoming record output files:
-      CHANGE: '_change'
-      STATIC: '_static'
-      NEW: '_add'
+      CHANGE: '_prep_for_load'
+      STATIC: 'do not output'
+      NEW: '_prep_for_load'
     produce delete file: true
     report delete count on screen: true
     elvl sets AC status: true
@@ -430,7 +432,10 @@ collections:
           - delimiter: 'u'
             value: '-'
   WCM - CUP:
-    id affix value: 'CUP'
+    clean ids:
+      - find: 'wcmcup'
+        replace: ''
+    id affix value: 'cup'
     add MARC field spec:
       - tag: '773'
         i1: '1'
