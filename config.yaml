@@ -97,7 +97,7 @@ institution:
 workflows:
   WCM - routine update using most recent whole file + last whole file:
     clean ids:
-      - find: '^o(c[mn]|n)'
+      - find: '[a-zA-Z]'
         replace: ''
       - find: ' *$'
         replace: ''
