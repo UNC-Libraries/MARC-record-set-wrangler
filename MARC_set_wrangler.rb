@@ -449,7 +449,9 @@ def get_fields_by_spec(rec, spec)
   return fields
 end
 
-def get_fields_for_comparison(rec, omitfspec, omitsfspec)
+def get_fields_for_comparison(rec, config)
+  omitfspec = config['omit from comparison fields']
+  omitsfspec = config['omit from comparison subfields']
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
   tags_w_sf_omissions = omitsfspec.keys if omitsfspec
@@ -477,9 +479,9 @@ def get_fields_for_comparison(rec, omitfspec, omitsfspec)
   }
   compare_strings = []
   compare.each { |f|
-    fs = f.to_s
-    # fsdc = UnicodeUtils.compatibility_decomposition(fs)
-    # compare_strings << fsdc
+    fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+    fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
+    fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
     compare_strings << fs 
   }
   compare_strings.sort!
@@ -700,8 +702,8 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     
     if thisconfig['set record status by file diff']
       if ri.ovdata.size > 0
-        compnew = get_fields_for_comparison(rec, omission_spec, omission_spec_sf)
-        compold = get_fields_for_comparison(exrec, omission_spec, omission_spec_sf)
+        compnew = get_fields_for_comparison(rec, thisconfig)
+        compold = get_fields_for_comparison(exrec, thisconfig)
         changed_fields = ( compnew - compold ) + ( compold - compnew )
 
         if changed_fields.size > 0
