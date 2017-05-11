@@ -194,7 +194,7 @@ workflows:
 
   WCM - routine update using most recent whole file + current ILS set:
     clean ids:
-      - find: '^o(c[mn]|n)'
+      - find: '[a-zA-Z]'
         replace: ''
       - find: ' *$'
         replace: ''
@@ -216,7 +216,7 @@ workflows:
     set record status by file diff: true
     report record status counts on screen: true
     omit from comparison fields:
-      - tag: '00[5678]'
+      - tag: '00[15678]'
       - tag: '019'
       - tag: '0(2[049]|3[57]|49|55|7[02]|84|9[06])'
       - tag: '060'
@@ -254,6 +254,7 @@ workflows:
       '040': 'cd'
       '264': 'e'
       '300': 'c'
+    ignore end of field periods in field comparison: true
     flag rec status: true
     incoming record output files:
       CHANGE: '_change'
