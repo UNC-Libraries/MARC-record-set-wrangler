@@ -95,7 +95,7 @@ institution:
   show combined config: false
   
 workflows:
-  WCM - routine update using most recent whole file + last whole file:
+  WCM - compare current full set against last full set downloaded:
     clean ids:
       - find: '[a-zA-Z]'
         replace: ''
@@ -192,7 +192,7 @@ workflows:
     add noAC MARC fields: true
     flag AC recs with changed headings: false
 
-  WCM - routine update using most recent whole file + current ILS set:
+  WCM - compare current downloadable full set against current ILS set:
     clean ids:
       - find: '[a-zA-Z]'
         replace: ''
