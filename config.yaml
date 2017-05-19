@@ -92,9 +92,33 @@ institution:
       subfields:
         - delimiter: 'a'
           value: 'LTIEXP'
+  format flag MARC spec:
+    - tag: '999'
+      i1: '8'
+      i2: '9'
+      subfields:
+        - delimiter: 'a'
+          value: '[FORMAT]'          
   show combined config: false
   
 workflows:
+  pre-processing check:
+    clean ids:
+      # - find: '[a-zA-Z]'
+      #   replace: ''
+      # - find: ' *$'
+      #   replace: ''
+      # - find: '\\$'
+      #   replace: ''
+    use id affix: false
+    use existing record set: false
+    elvl sets AC status: false
+    write format flag to recs: true
+    write warnings to recs: true
+    log warnings: true
+    warn about non-e-resource records: true
+    warn about cat lang: true
+    
   WCM - compare current full set against last full set downloaded:
     clean ids:
       - find: '[a-zA-Z]'
@@ -270,6 +294,8 @@ workflows:
 # settings for individual collections/file segments
 # collections must be set up here to be choosable when script is run
 collections:
+  generic collection (no special collection-level processing):
+    placeholder option: true
   WCM - ACS:
     id affix value: 'ACS'
     add MARC field spec:
