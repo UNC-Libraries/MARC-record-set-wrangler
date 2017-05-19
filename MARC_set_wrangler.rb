@@ -317,9 +317,55 @@ if thisconfig['set record status by file diff']
   omission_spec_sf = thisconfig['omit from comparison subfields']
 end
 
+if thisconfig['write format flag to recs']
+    unless thisconfig['format flag MARC spec']
+      abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'write format flag to recs' = true, you need to specify 'format flag MARC spec'\n\n")
+    end
+end
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Define repeated procedures
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+module Format
+  require 'lib/enhanced_marc'
+
+  def self.rec_type(rec)
+    case rec.record_type
+    when 'BKS'
+      'ebook'
+    when 'SCO'
+      'score'
+    when 'MAP'
+      case rec['008'].value[25,1]
+      when 'e'
+        'atlas'
+      when 'a'
+        'map'
+      end
+    when 'REC'
+      case rec.leader.get_type_code
+      when 'i'
+        if rec['008'].value[30,2] =~ /[abcdefhmop]/
+          'audiobook'
+        else
+          'non-music sound recording'
+        end
+      when 'j'
+        'streaming audio'
+      end
+    when 'SER'
+      case rec.leader.get_blvl_code
+      when 's'
+        'ejournal'
+      when 'i'
+        'integrating resource'
+      end
+    when 'VIS'
+      'streaming video' if rec['008'].value[33,1] =~ /[fmv]/
+    end
+  end
+  
+end
 
 # Produces array of RecInfo structs from the MARC files in a directory
 def get_rec_info(dir, label)
@@ -800,6 +846,15 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       end
     end
 
+    if thisconfig['write format flag to recs']
+      f = Format.rec_type(rec)
+      if f
+        reced.add_field_with_parameter(thisconfig['format flag MARC spec'], [{'[FORMAT]'=>f}])
+      else
+        ri.warnings << 'Unknown record format'
+      end
+    end
+    
     if thisconfig['add MARC field spec']
       thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
     end
