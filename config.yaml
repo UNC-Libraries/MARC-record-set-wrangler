@@ -93,7 +93,7 @@ institution:
         - delimiter: 'a'
           value: 'LTIEXP'
   format flag MARC spec:
-    - tag: '999'
+    - tag: '990'
       i1: '8'
       i2: '9'
       subfields:
@@ -111,6 +111,8 @@ workflows:
       # - find: '\\$'
       #   replace: ''
     use id affix: false
+    #affix type: 'prefix'
+    #id affix value: 'test'
     use existing record set: false
     elvl sets AC status: false
     write format flag to recs: true
