@@ -327,7 +327,7 @@ end
 # Define repeated procedures
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 module Format
-  require 'lib/enhanced_marc'
+  require 'enhanced_marc'
 
   def self.rec_type(rec)
     case rec.record_type
