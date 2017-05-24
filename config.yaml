@@ -111,11 +111,10 @@ workflows:
       # - find: '\\$'
       #   replace: ''
     use id affix: false
-    #affix type: 'prefix'
-    #id affix value: 'test'
     use existing record set: false
     elvl sets AC status: false
     write format flag to recs: true
+    check LDR/09 for in-set consistency: true
     write warnings to recs: true
     log warnings: true
     warn about non-e-resource records: true
@@ -166,6 +165,7 @@ workflows:
     add AC MARC fields: false
     add noAC MARC fields: true
     flag AC recs with changed headings: true
+    write format flag to recs: true
     warn about non-e-resource records: true
     warn about cat lang: true
     write warnings to recs: true
@@ -190,6 +190,7 @@ workflows:
     warn about non-e-resource records: true
     warn about cat lang: true
     write warnings to recs: true
+    write format flag to recs: true
     log warnings: true
     set record status by file diff: false
     #omit from comparison fields:
@@ -237,6 +238,7 @@ workflows:
     flag overlay type: true
     warn about non-e-resource records: true
     warn about cat lang: true
+    write format flag to recs: true
     write warnings to recs: true
     log warnings: true
     set record status by file diff: true
