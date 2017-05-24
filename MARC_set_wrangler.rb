@@ -832,7 +832,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     end
 
     rec = reced.sort_fields
-
+    
     if thisconfig['incoming record output files']
       status = ri.diff_status
       if writers.has_key?(writeconfig[status])
