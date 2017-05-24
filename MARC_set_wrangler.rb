@@ -4,7 +4,7 @@ $LOAD_PATH << '.'
 require 'csv'
 require 'yaml'
 require 'marc'
-require 'marc_record'
+require 'lib/marc_record'
 require 'highline/import'
 require 'pp'
 require 'fileutils'
@@ -73,47 +73,6 @@ pp(thisconfig) if thisconfig['show combined config']
 idfields = []
 idfields << thisconfig['main id'] if thisconfig['main id']
 idfields << thisconfig['merge id'] if thisconfig['merge id']
-
-# RecordInfo holds basic data about MARC records needed for matching ids and
-#  other processing, as well as efficiently retrieving the full MARC record
-#  from its file for processing
-#  :id = String 001 value
-#  :mergeids = Array of 019$a values
-#  :sourcefile = String the path to the .mrc file the record is in
-#  :warnings = Array warning messages associated with record
-#  :overlay_type = Array of elements which may be either 'main id' or 'merge id'
-class RecordInfo
-  attr_accessor :id
-  attr_accessor :mergeids
-  attr_accessor :sourcefile
-  attr_accessor :lookupfile
-  attr_accessor :outfile
-  attr_accessor :warnings
-  attr_accessor :ovdata
-  attr_accessor :overlay_type
-  attr_accessor :under_ac
-  attr_accessor :diff_status
-  attr_accessor :ac_changed
-
-  def initialize(id)
-    @id = id
-    @warnings = []
-    @ovdata = []
-    @overlay_type = []
-  end  
-end
-
-# :will_overlay = ExistingRecordInfo object
-class IncomingRecordInfo < RecordInfo
-  alias :will_overlay :ovdata
-  alias :will_overlay= :ovdata=
-end
-
-# :will_be_overlaid_by = IncomingRecordInfo object
-class ExistingRecordInfo < RecordInfo
-  alias :will_be_overlaid_by :ovdata
-  alias :will_be_overlaid_by= :ovdata=
-end
 
 class Affix
   attr_reader :affix
@@ -385,7 +344,7 @@ def get_rec_info(dir, label)
                 end
         case label
         when 'existing'
-          ri = ExistingRecordInfo.new(id)
+          ri = MARC::ExistingRecordInfo.new(id)
           mypath = "working/#{rec_increment}.mrc"
           writer = MARC::Writer.new(mypath)
           writer.write(rec)
@@ -393,7 +352,7 @@ def get_rec_info(dir, label)
           ri.lookupfile = mypath
           rec_increment += 1
         when 'incoming'
-          ri = IncomingRecordInfo.new(id)
+          ri = MARC::IncomingRecordInfo.new(id)
         else
           abort("\n\nUnknown record set type (neither incoming nor existing).\n\n")
         end
@@ -829,6 +788,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         end
       end
     end
+    
+    if thisconfig['check LDR/09 for in-set consistency']
+      #gather this for each record as we loop through, so we can check over the set after
+      ri.character_coding_scheme = rec.leader[9,1]
+    end
 
     if ri.ac_changed
       ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
@@ -896,6 +860,8 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
   end
 end
 
+set_warnings = []
+
 if thisconfig['report record status counts on screen']
     puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
     puts "RESULTS"
@@ -903,6 +869,21 @@ if thisconfig['report record status counts on screen']
     in_rec_info.group_by { |ri| ri.diff_status }.each_pair do |k, v|
       puts "#{v.size} #{k} record(s)"
     end
+end
+
+if thisconfig['check LDR/09 for in-set consistency']
+  by_encoding = in_rec_info.group_by { |ri| ri.character_coding_scheme }
+  
+  case by_encoding.keys.size
+  when 2
+    set_warnings << 'Records have different LDR/09 (encoding) values. Split file based on this value, translate non-UTF-8 records to UTF-8, and re-join all records into one file before proceeding.'
+  when 1
+    if by_encoding.keys[0] == ' '
+      set_warnings << 'Records are not UTF-8, according to LDR/09. Unless instructions for the set specifically say otherwise, translate output records to UTF-8 before proceeding.'
+    end
+  else
+    set_warnings << 'Something very odd is going on with LDR/09. Check before proceeding.'
+  end
 end
 
 if thisconfig['produce delete file']
@@ -935,17 +916,22 @@ end
     deletes = ex_rec_info.find_all { |ri| ri.will_be_overlaid_by.size == 0 } if deletes == nil
     puts "#{deletes.size} deletes"
   end
-
-if thisconfig['log warnings']
-  all_warnings = in_rec_info.map { |ri| ri.warnings if ri.warnings.size > 0 }.compact.flatten(1)
-  if all_warnings.size > 0
-    logpath = "#{out_dir}/#{filestem}_log.csv"
-    log = CSV.open(logpath, "wb")
-    log << ['source file', 'output file', 'rec id', 'warning']
-    all_warnings.each { |w| log << w }
-    log.close
+  
+  if thisconfig['log warnings']
+    all_warnings = in_rec_info.map { |ri| ri.warnings if ri.warnings.size > 0 }.compact.flatten(1)
+    if set_warnings.size > 0
+      set_warnings.map! { |w| ['SET', 'SET', 'SET', w] }
+      set_warnings.reverse!.each { |w| all_warnings.unshift(w) }
+    end
+    
+    if all_warnings.size > 0
+      logpath = "#{out_dir}/#{filestem}_log.csv"
+      log = CSV.open(logpath, "w")
+      log << ['source file', 'output file', 'attr_reader :ec id', 'warning']
+      all_warnings.each { |w| log << w }
+      log.close
+    end
   end
-end
 
 
 if thisconfig['incoming record output files']
