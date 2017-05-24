@@ -6,18 +6,10 @@ module MARC
   class Writer
     attr_reader :fh
   end
-  
+
+
   class Record
     include Comparable
-    attr_accessor :warnings
-    attr_accessor :changed_fields
-    attr_accessor :changed_ac_fields
-    attr_accessor :elvl_ac
-    attr_accessor :ac_action
-    attr_accessor :overlay_point
-    attr_accessor :ac_fields
-    attr_accessor :source_file
-    attr_accessor :diff_status
 
     # call-seq:
     #   rec.countf(tag) => integer
@@ -204,4 +196,47 @@ module MARC
     end #def count_uncontrolled_shs
 
   end #class Record
+
+  # RecordInfo holds basic data about MARC records needed for matching ids and
+#  other processing, as well as efficiently retrieving the full MARC record
+#  from its file for processing
+#  :id = String 001 value
+#  :mergeids = Array of 019$a values
+#  :sourcefile = String the path to the .mrc file the record is in
+#  :warnings = Array warning messages associated with record
+#  :overlay_type = Array of elements which may be either 'main id' or 'merge id'
+class RecordInfo
+  attr_accessor :id
+  attr_accessor :mergeids
+  attr_accessor :sourcefile
+  attr_accessor :lookupfile
+  attr_accessor :outfile
+  attr_accessor :warnings
+  attr_accessor :ovdata
+  attr_accessor :overlay_type
+  attr_accessor :under_ac
+  attr_accessor :diff_status
+  attr_accessor :ac_changed
+  attr_accessor :character_coding_scheme
+
+  def initialize(id)
+    @id = id
+    @warnings = []
+    @ovdata = []
+    @overlay_type = []
+  end  
+end
+
+# :will_overlay = ExistingRecordInfo object
+class IncomingRecordInfo < RecordInfo
+  alias :will_overlay :ovdata
+  alias :will_overlay= :ovdata=
+end
+
+# :will_be_overlaid_by = IncomingRecordInfo object
+class ExistingRecordInfo < RecordInfo
+  alias :will_be_overlaid_by :ovdata
+  alias :will_be_overlaid_by= :ovdata=
+end
+
 end #module MARC
