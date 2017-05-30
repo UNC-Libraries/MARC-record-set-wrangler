@@ -291,36 +291,36 @@ module Format
   def self.rec_type(rec)
     case rec.record_type
     when 'BKS'
-      'ebook'
+      'BK:ebook'
     when 'SCO'
-      'score'
+      'MU:score'
     when 'MAP'
       case rec['008'].value[25,1]
       when 'e'
-        'atlas'
+        'MP:atlas'
       when 'a'
-        'map'
+        'MP:map'
       end
     when 'REC'
       case rec.leader.get_type_code
       when 'i'
         if rec['008'].value[30,2] =~ /[abcdefhmop]/
-          'audiobook'
+          'MP:audiobook'
         else
-          'non-music sound recording'
+          'MP:non-music sound recording'
         end
       when 'j'
-        'streaming audio'
+        'MP:streaming audio'
       end
     when 'SER'
       case rec.leader.get_blvl_code
       when 's'
-        'ejournal'
+        'CR:ejournal'
       when 'i'
-        'integrating resource'
+        'CR:integrating resource'
       end
     when 'VIS'
-      'streaming video' if rec['008'].value[33,1] =~ /[fmv]/
+      'VM:streaming video' if rec['008'].value[33,1] =~ /[fmv]/
     end
   end
   
