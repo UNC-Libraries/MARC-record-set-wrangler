@@ -53,11 +53,15 @@ module MARC
     end
 
     def cat_lang
-      catlang = self['040']['b']
-      if catlang == nil
-        return 'eng'
+      if self.tags.include?('040')
+        catlang = self['040']['b']
+        if catlang == nil
+          return 'eng'
+        else
+          catlang
+        end
       else
-        return catlang
+        nil
       end
     end
 

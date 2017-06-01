@@ -745,7 +745,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['warn about cat lang']
       catlangs = thisconfig['cat lang']
       reclang = rec.cat_lang
-      ri.warnings << 'Not our language of cataloging' unless catlangs.include?(reclang)
+      if reclang == nil
+        ri.warnings << 'No 040 field, so language of cataloging cannot be checked.'
+      else
+        ri.warnings << 'Not our language of cataloging' unless catlangs.include?(reclang)
+      end
     end
 
     if thisconfig['elvl sets AC status']
