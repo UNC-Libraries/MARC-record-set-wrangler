@@ -119,6 +119,53 @@ workflows:
     log warnings: true
     warn about non-e-resource records: true
     warn about cat lang: true
+
+  ASP sets:
+    clean ids:
+      - find: '[a-zA-Z]'
+        replace: ''
+      - find: ' *$'
+        replace: ''
+      - find: '\/$'
+        replace: ''
+    use id affix: false
+    use existing record set: true
+    overlay merged records: false
+    ignore multiple overlays: false
+    manipulate 019 for overlay: false
+    flag overlay type: false
+    set record status by file diff: true
+    report record status counts on screen: true
+    omit from comparison fields:
+      - tag: '001'
+      - tag: '005'
+      - tag: '019'
+      - tag: '035'
+      - tag: '598'
+        field has: 'Reason for updated record:'
+      - tag: '655'
+        field has: 'Electronic book'
+      - tag: '773'
+        field has: '\(online collection\)'
+      - tag: '938'
+      - tag: '994'
+      - tag: '999'
+    omit from comparison subfields:
+      '040': 'cd'
+    flag rec status: true
+    incoming record output files:
+      CHANGE: '_in_both'
+      STATIC: '_in_both'
+      NEW: '_in_new_only'
+    produce delete file: true
+    report delete count on screen: true
+    elvl sets AC status: false
+    write format flag to recs: false
+    check LDR/09 for in-set consistency: false
+    write warnings to recs: false
+    log warnings: true
+    warn about non-e-resource records: false
+    warn about cat lang: false
     
   WCM - compare current full set against last full set downloaded:
     clean ids:
