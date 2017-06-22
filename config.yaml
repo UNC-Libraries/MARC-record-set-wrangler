@@ -126,7 +126,7 @@ workflows:
         replace: ''
       - find: ' *$'
         replace: ''
-      - find: '\/$'
+      - find: '\/.*$'
         replace: ''
     use id affix: false
     use existing record set: true
@@ -152,7 +152,7 @@ workflows:
       - tag: '999'
     omit from comparison subfields:
       '040': 'cd'
-    flag rec status: true
+    flag rec status: false
     incoming record output files:
       CHANGE: '_in_both'
       STATIC: '_in_both'
