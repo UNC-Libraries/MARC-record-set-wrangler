@@ -120,7 +120,7 @@ workflows:
     warn about non-e-resource records: true
     warn about cat lang: true
 
-  ASP sets:
+  ASP reconciliation and projects:
     clean ids:
       - find: '[a-zA-Z]'
         replace: ''

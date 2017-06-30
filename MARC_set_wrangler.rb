@@ -305,12 +305,12 @@ module Format
       case rec.leader.get_type_code
       when 'i'
         if rec['008'].value[30,2] =~ /[abcdefhmop]/
-          'MP:audiobook'
+          'MU:audiobook'
         else
-          'MP:non-music sound recording'
+          'MU:non-music sound recording'
         end
       when 'j'
-        'MP:streaming audio'
+        'MU:streaming audio'
       end
     when 'SER'
       case rec.leader.get_blvl_code
