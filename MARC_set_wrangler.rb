@@ -166,7 +166,7 @@ out_dir = 'output'
 wrk_dir = 'working'
 
 # Set up MARC writers
-filestem = Dir.glob("#{in_dir}/*.mrc")[0].gsub!(/^.*\//, '').gsub!(/\.mrc/, '')
+filestem = Dir.glob("#{in_dir}/*.mrc")[0].gsub!(/^.*\//, '').gsub!(/\.mrc/, '').gsub!(/_ORIG/, '')
 writers = {}
 if thisconfig['incoming record output files']
   writeconfig = thisconfig['incoming record output files'].dup.delete_if { |k, v| v == 'do not output' }
@@ -711,6 +711,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         compold = get_fields_for_comparison(exrec, thisconfig)
         changed_fields = ( compnew - compold ) + ( compold - compnew )
 
+
         if changed_fields.size > 0
           ri.diff_status = 'CHANGE'
         else
@@ -729,8 +730,21 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     
     if thisconfig['flag AC recs with changed headings']
       if ri.ovdata.size > 0
-        ac_new = get_fields_by_spec(rec, ac_fields).map { |f| f.to_s }
-        ac_old = get_fields_by_spec(exrec, ac_fields).map { |f| f.to_s }
+        ac_new = []
+        get_fields_by_spec(rec, ac_fields).each { |f|
+          fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+          fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
+          fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
+          ac_new << fs
+        }
+        ac_old = []
+        get_fields_by_spec(exrec, ac_fields).each { |f|
+          fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+          fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
+          fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
+          ac_old << fs
+        }
+          
         changed_headings = (ac_new - ac_old) + (ac_old - ac_new)
         if changed_headings.size > 0
           ri.ac_changed = true
