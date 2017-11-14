@@ -301,6 +301,8 @@ module Format
       when 'a'
         'MP:map'
       end
+    when 'MIX'
+      'MX:archival material'
     when 'REC'
       case rec.leader.get_type_code
       when 'i'
