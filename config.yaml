@@ -723,38 +723,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-  WCM - SPR2016:
-    id affix value: 'SPR2016'
+  WCM - SPRnew:
+    id affix value: 'SPRnew'
     add MARC field spec:
       - tag: '773'
         i1: '1'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SPR2016'
-      - tag: '590'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Provider: SpringerLink.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - SPR2017:
-    id affix value: 'SPR2017'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SPR2017'
+            value: 'OCLC WorldShare Collection Manager managed collection. SPRnew'
       - tag: '590'
         i1: ' '
         i2: ' '
@@ -792,15 +769,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-  WCM - SPRolder:
-    id affix value: 'SPRolder'
+  WCM - SPRold:
+    id affix value: 'SPRold'
     add MARC field spec:
       - tag: '773'
         i1: '0'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SPRolder'
+            value: 'OCLC WorldShare Collection Manager managed collection. SPRold'
       - tag: '590'
         i1: ' '
         i2: ' '
