@@ -347,6 +347,27 @@ workflows:
     add noAC MARC fields: true
     flag AC recs with changed headings: true
 
+  OHO pre-edit:
+    use existing record set: true
+    ignore multiple overlays: false
+    set record status by file diff: true
+    report record status counts on screen: true
+    omit from comparison fields:
+       - tag: '598'
+         field has: 'Reason for updated record:'
+    flag rec status: true
+    incoming record output files:
+      CHANGE: '_prep_for_load'
+      STATIC: 'do not output'
+      NEW: '_prep_for_load'
+    produce delete file: true
+    report delete count on screen: true
+    write format flag to recs: true
+    warn about non-e-resource records: true
+    warn about cat lang: true
+    write warnings to recs: true
+    log warnings: true
+    
 # settings for individual collections/file segments
 # collections must be set up here to be choosable when script is run
 collections:
@@ -608,15 +629,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-  WCM - DynCUP:
-    id affix value: 'DynCUP'
+  WCM - CHO:
+    id affix value: 'CHO'
     add MARC field spec:
       - tag: '773'
         i1: '1'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. CUP dynamic ebooks'
+            value: 'OCLC WorldShare Collection Manager managed collection. CHO'
       - tag: '590'
         i1: ' '
         i2: ' '

@@ -462,28 +462,31 @@ def get_fields_for_comparison(rec, config)
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
   tags_w_sf_omissions = omitsfspec.keys if omitsfspec
+  
   compare = []
+
   to_compare.each { |cf|
     if cf.class.name == 'MARC::ControlField'
       compare << cf
     else
-      if omitsfspec
-        if tags_w_sf_omissions.include?(cf.tag)
-        sfs_to_omit = omitsfspec[cf.tag].chars
-        newfield = MARC::DataField.new(cf.tag, cf.indicator1, cf.indicator2)
-        cf.subfields.each { |sf|
-          unless sfs_to_omit.include?(sf.code)
-            newsf = MARC::Subfield.new(sf.code, sf.value)
-            newfield.append(newsf)
-          end
-        }
-        compare << newfield
-      else
+      if omitsfspec.is_a?(NilClass)
         compare << cf
+      else
+        if tags_w_sf_omissions.include?(cf.tag)
+          sfs_to_omit = omitsfspec[cf.tag].chars
+          newfield = MARC::DataField.new(cf.tag, cf.indicator1, cf.indicator2)
+          cf.subfields.each { |sf|
+            unless sfs_to_omit.include?(sf.code)
+              newsf = MARC::Subfield.new(sf.code, sf.value)
+              newfield.append(newsf)
+            end
+          }
+          compare << newfield
         end
       end
     end
   }
+
   compare_strings = []
   compare.each { |f|
     fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
@@ -710,7 +713,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['set record status by file diff']
       if ri.ovdata.size > 0
         compnew = get_fields_for_comparison(rec, thisconfig)
+        #puts "NEW"
+        #compnew.each { |s| puts s }
         compold = get_fields_for_comparison(exrec, thisconfig)
+        #puts "OLD"
+        #compold.each { |s| puts s }        
         changed_fields = ( compnew - compold ) + ( compold - compnew )
 
 
@@ -722,6 +729,10 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       else
         ri.diff_status = 'NEW'
       end
+    end
+
+    if ri.overlay_type.include?('merge id') && thisconfig['overlay merged records']
+      ri.diff_status = 'CHANGE'
     end
     
     if ri.diff_status == 'STATIC'
