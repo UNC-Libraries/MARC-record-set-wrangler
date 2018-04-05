@@ -92,9 +92,81 @@ institution:
       subfields:
         - delimiter: 'a'
           value: 'LTIEXP'
+  format flag MARC spec:
+    - tag: '990'
+      i1: '8'
+      i2: '9'
+      subfields:
+        - delimiter: 'a'
+          value: '[FORMAT]'          
   show combined config: false
   
 workflows:
+  pre-processing check:
+    clean ids:
+      # - find: '[a-zA-Z]'
+      #   replace: ''
+      # - find: ' *$'
+      #   replace: ''
+      # - find: '\\$'
+      #   replace: ''
+    use id affix: false
+    use existing record set: false
+    elvl sets AC status: false
+    write format flag to recs: true
+    check LDR/09 for in-set consistency: true
+    write warnings to recs: true
+    log warnings: true
+    warn about non-e-resource records: true
+    warn about cat lang: true
+
+  ASP reconciliation and projects:
+    clean ids:
+      - find: '[a-zA-Z]'
+        replace: ''
+      - find: ' *$'
+        replace: ''
+      - find: '\/.*$'
+        replace: ''
+    use id affix: false
+    use existing record set: true
+    overlay merged records: false
+    ignore multiple overlays: false
+    manipulate 019 for overlay: false
+    flag overlay type: false
+    set record status by file diff: true
+    report record status counts on screen: true
+    omit from comparison fields:
+      - tag: '001'
+      - tag: '005'
+      - tag: '019'
+      - tag: '035'
+      - tag: '598'
+        field has: 'Reason for updated record:'
+      - tag: '655'
+        field has: 'Electronic book'
+      - tag: '773'
+        field has: '\(online collection\)'
+      - tag: '938'
+      - tag: '994'
+      - tag: '999'
+    omit from comparison subfields:
+      '040': 'cd'
+    flag rec status: false
+    incoming record output files:
+      CHANGE: '_in_both'
+      STATIC: '_in_both'
+      NEW: '_in_new_only'
+    produce delete file: true
+    report delete count on screen: true
+    elvl sets AC status: false
+    write format flag to recs: false
+    check LDR/09 for in-set consistency: false
+    write warnings to recs: false
+    log warnings: true
+    warn about non-e-resource records: false
+    warn about cat lang: false
+    
   WCM - compare current full set against last full set downloaded:
     clean ids:
       - find: '[a-zA-Z]'
@@ -118,13 +190,16 @@ workflows:
       - tag: '005'
       - tag: '019'
       - tag: '035'
+      - tag: '506'
+      - tag: '590'
       - tag: '598'
         field has: 'Reason for updated record:'
       - tag: '655'
         field has: 'Electronic book'
       - tag: '773'
-        field has: '\(online collection\)'
+        field has: 'WorldShare Collection Manager'
       - tag: '938'
+      - tag: '949'
       - tag: '994'
       - tag: '999'
     omit from comparison subfields:
@@ -140,6 +215,7 @@ workflows:
     add AC MARC fields: false
     add noAC MARC fields: true
     flag AC recs with changed headings: true
+    write format flag to recs: true
     warn about non-e-resource records: true
     warn about cat lang: true
     write warnings to recs: true
@@ -153,7 +229,7 @@ workflows:
         replace: ''
       - find: '\\$'
         replace: ''
-    #use id affix: true
+    use id affix: true
     affix type: 'suffix'
     id affix value: 'wcm'
     overlay merged records: false
@@ -164,6 +240,7 @@ workflows:
     warn about non-e-resource records: true
     warn about cat lang: true
     write warnings to recs: true
+    write format flag to recs: true
     log warnings: true
     set record status by file diff: false
     #omit from comparison fields:
@@ -194,8 +271,10 @@ workflows:
 
   WCM - compare current downloadable full set against current ILS set:
     clean ids:
-      - find: '[a-zA-Z]'
-        replace: ''
+      - find: '^o(c[mn]|n)(\d+)\D*'
+        replace: '\2'
+      - find: '^(\d+)w[cs]m.*$'
+        replace: '\1'
       - find: ' *$'
         replace: ''
       - find: '\\$'
@@ -211,6 +290,7 @@ workflows:
     flag overlay type: true
     warn about non-e-resource records: true
     warn about cat lang: true
+    write format flag to recs: true
     write warnings to recs: true
     log warnings: true
     set record status by file diff: true
@@ -257,9 +337,9 @@ workflows:
     ignore end of field periods in field comparison: true
     flag rec status: true
     incoming record output files:
-      CHANGE: '_change'
+      CHANGE: '_prep_for_load'
       STATIC: 'do not output'
-      NEW: '_add'
+      NEW: '_prep_for_load'
     produce delete file: true
     report delete count on screen: true
     elvl sets AC status: true
@@ -267,9 +347,32 @@ workflows:
     add noAC MARC fields: true
     flag AC recs with changed headings: true
 
+  OHO pre-edit:
+    use existing record set: true
+    ignore multiple overlays: false
+    set record status by file diff: true
+    report record status counts on screen: true
+    omit from comparison fields:
+       - tag: '598'
+         field has: 'Reason for updated record:'
+    flag rec status: true
+    incoming record output files:
+      CHANGE: '_prep_for_load'
+      STATIC: 'do not output'
+      NEW: '_prep_for_load'
+    produce delete file: true
+    report delete count on screen: true
+    write format flag to recs: true
+    warn about non-e-resource records: true
+    warn about cat lang: true
+    write warnings to recs: true
+    log warnings: true
+    
 # settings for individual collections/file segments
 # collections must be set up here to be choosable when script is run
 collections:
+  generic collection (no special collection-level processing):
+    placeholder option: true
   WCM - ACS:
     id affix value: 'ACS'
     add MARC field spec:
@@ -293,24 +396,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - AGU:
     id affix value: 'AGU'
     add MARC field spec:
@@ -334,24 +419,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - AMS:
     id affix value: 'AMS'
     add MARC field spec:
@@ -375,24 +442,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
+  WCM - CHO:
+    id affix value: 'CHO'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
         subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
           - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
+            value: 'OCLC WorldShare Collection Manager managed collection. CHO'
+      - tag: '590'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Provider: Cambridge University Press.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - CIAO:
     id affix value: 'CIAO'
     add MARC field spec:
@@ -416,22 +488,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
+  WCM - Credo:
+    id affix value: 'Credo'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
         subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
           - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
+            value: 'OCLC WorldShare Collection Manager managed collection. Credo'
+      - tag: '590'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Provider: Credo Reference.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - CUP:
     clean ids:
       - find: 'wcmcup'
@@ -458,24 +537,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
+  WCM - DGger:
+    id affix value: 'DGger'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
         subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
           - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
+            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter German Studies'
+      - tag: '590'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Provider: De Gruyter.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - DGcolumbia:
     id affix value: 'DGcolumbia'
     add MARC field spec:
@@ -499,24 +583,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - DGedition:
     id affix value: 'DGedition'
     add MARC field spec:
@@ -540,24 +606,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - DGharvard:
     id affix value: 'DGharvard'
     add MARC field spec:
@@ -566,7 +614,7 @@ collections:
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Harvard'
+            value: 'OCLC WorldShare Collection Manager managed collection. DGharvard'
       - tag: '590'
         i1: ' '
         i2: ' '
@@ -581,24 +629,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - DGpenn:
     id affix value: 'DGpenn'
     add MARC field spec:
@@ -622,24 +652,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - DGprinceton:
     id affix value: 'DGprinceton'
     add MARC field spec:
@@ -663,65 +675,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
-  WCM - DynCUP:
-    id affix value: 'DynCUP'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. CUP dynamic ebooks'
-      - tag: '590'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Provider: Cambridge University Press.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - EMS:
     id affix value: 'EMS'
     add MARC field spec:
@@ -745,24 +698,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - GSW:
     id affix value: 'GSW'
     add MARC field spec:
@@ -786,24 +721,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - RSC:
     id affix value: 'RSC'
     add MARC field spec:
@@ -827,24 +744,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - SPIE:
     id affix value: 'SPIE'
     add MARC field spec:
@@ -868,33 +767,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
-  WCM - SPR2016:
-    id affix value: 'SPR2016'
+  WCM - SPRnew:
+    id affix value: 'SPRnew'
     add MARC field spec:
       - tag: '773'
         i1: '1'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SpringerLink 2016'
+            value: 'OCLC WorldShare Collection Manager managed collection. SPRnew'
       - tag: '590'
         i1: ' '
         i2: ' '
@@ -909,74 +790,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
-  WCM - SPR2017:
-    id affix value: 'SPR2017'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SpringerLink 2017'
-      - tag: '590'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Provider: SpringerLink.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - SPRgratis:
-    id affix value: 'SPRgrat'
+    id affix value: 'SPRgratis'
     add MARC field spec:
       - tag: '773'
-        i1: '1'
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SpringerLink gratis titles'
+            value: 'OCLC WorldShare Collection Manager managed collection. SPRgratis'
       - tag: '590'
         i1: ' '
         i2: ' '
@@ -991,31 +813,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-  WCM - SPRolder:
-    id affix value: 'SPRo'
+  WCM - SPRold:
+    id affix value: 'SPRold'
     add MARC field spec:
       - tag: '773'
-        i1: '1'
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SpringerLink older purchases'
+            value: 'OCLC WorldShare Collection Manager managed collection. SPRold'
       - tag: '590'
         i1: ' '
         i2: ' '
@@ -1030,24 +836,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - SciDir:
     id affix value: 'SciDir'
     add MARC field spec:
@@ -1071,24 +859,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
-          - delimiter: 'n'
-            value: 'Perpetual access'
   WCM - SerAsMono:
     id affix value: 'SerAsMono'
     add MARC field spec:
@@ -1112,22 +882,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'ebnb'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
   WCM - Video:
     id affix value: 'SV'
     add MARC field spec:
@@ -1136,7 +890,7 @@ collections:
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. Video collections'
+            value: 'OCLC WorldShare Collection Manager managed collection. Video'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -1145,20 +899,4 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '949'
-        i1: ' '
-        i2: '1'
-        subfields:
-          - delimiter: 'g'
-            value: '1'
-          - delimiter: 'l'
-            value: 'estr'
-          - delimiter: 't'
-            value: '11'
-          - delimiter: 'r'
-            value: 'n'
-          - delimiter: 'h'
-            value: '0'
-          - delimiter: 'u'
-            value: '-'
 

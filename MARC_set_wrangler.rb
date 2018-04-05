@@ -4,7 +4,7 @@ $LOAD_PATH << '.'
 require 'csv'
 require 'yaml'
 require 'marc'
-require 'marc_record'
+require 'lib/marc_record'
 require 'highline/import'
 require 'pp'
 require 'fileutils'
@@ -73,47 +73,6 @@ pp(thisconfig) if thisconfig['show combined config']
 idfields = []
 idfields << thisconfig['main id'] if thisconfig['main id']
 idfields << thisconfig['merge id'] if thisconfig['merge id']
-
-# RecordInfo holds basic data about MARC records needed for matching ids and
-#  other processing, as well as efficiently retrieving the full MARC record
-#  from its file for processing
-#  :id = String 001 value
-#  :mergeids = Array of 019$a values
-#  :sourcefile = String the path to the .mrc file the record is in
-#  :warnings = Array warning messages associated with record
-#  :overlay_type = Array of elements which may be either 'main id' or 'merge id'
-class RecordInfo
-  attr_accessor :id
-  attr_accessor :mergeids
-  attr_accessor :sourcefile
-  attr_accessor :lookupfile
-  attr_accessor :outfile
-  attr_accessor :warnings
-  attr_accessor :ovdata
-  attr_accessor :overlay_type
-  attr_accessor :under_ac
-  attr_accessor :diff_status
-  attr_accessor :ac_changed
-
-  def initialize(id)
-    @id = id
-    @warnings = []
-    @ovdata = []
-    @overlay_type = []
-  end  
-end
-
-# :will_overlay = ExistingRecordInfo object
-class IncomingRecordInfo < RecordInfo
-  alias :will_overlay :ovdata
-  alias :will_overlay= :ovdata=
-end
-
-# :will_be_overlaid_by = IncomingRecordInfo object
-class ExistingRecordInfo < RecordInfo
-  alias :will_be_overlaid_by :ovdata
-  alias :will_be_overlaid_by= :ovdata=
-end
 
 class Affix
   attr_reader :affix
@@ -207,7 +166,7 @@ out_dir = 'output'
 wrk_dir = 'working'
 
 # Set up MARC writers
-filestem = Dir.glob("#{in_dir}/*.mrc")[0].gsub!(/^.*\//, '').gsub!(/\.mrc/, '')
+filestem = Dir.glob("#{in_dir}/*.mrc")[0].gsub!(/^.*\//, '').gsub!(/\.mrc/, '').gsub!(/_ORIG/, '')
 writers = {}
 if thisconfig['incoming record output files']
   writeconfig = thisconfig['incoming record output files'].dup.delete_if { |k, v| v == 'do not output' }
@@ -317,9 +276,57 @@ if thisconfig['set record status by file diff']
   omission_spec_sf = thisconfig['omit from comparison subfields']
 end
 
+if thisconfig['write format flag to recs']
+    unless thisconfig['format flag MARC spec']
+      abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'write format flag to recs' = true, you need to specify 'format flag MARC spec'\n\n")
+    end
+end
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Define repeated procedures
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+module Format
+  require 'enhanced_marc'
+
+  def self.rec_type(rec)
+    case rec.record_type
+    when 'BKS'
+      'BK:ebook'
+    when 'SCO'
+      'MU:score'
+    when 'MAP'
+      case rec['008'].value[25,1]
+      when 'e'
+        'MP:atlas'
+      when 'a'
+        'MP:map'
+      end
+    when 'MIX'
+      'MX:archival material'
+    when 'REC'
+      case rec.leader.get_type_code
+      when 'i'
+        if rec['008'].value[30,2] =~ /[abcdefhmop]/
+          'MU:audiobook'
+        else
+          'MU:non-music sound recording'
+        end
+      when 'j'
+        'MU:streaming audio'
+      end
+    when 'SER'
+      case rec.leader.get_blvl_code
+      when 's'
+        'CR:ejournal'
+      when 'i'
+        'CR:integrating resource'
+      end
+    when 'VIS'
+      'VM:streaming video' if rec['008'].value[33,1] =~ /[fmv]/
+    end
+  end
+  
+end
 
 # Produces array of RecInfo structs from the MARC files in a directory
 def get_rec_info(dir, label)
@@ -339,7 +346,7 @@ def get_rec_info(dir, label)
                 end
         case label
         when 'existing'
-          ri = ExistingRecordInfo.new(id)
+          ri = MARC::ExistingRecordInfo.new(id)
           mypath = "working/#{rec_increment}.mrc"
           writer = MARC::Writer.new(mypath)
           writer.write(rec)
@@ -347,7 +354,7 @@ def get_rec_info(dir, label)
           ri.lookupfile = mypath
           rec_increment += 1
         when 'incoming'
-          ri = IncomingRecordInfo.new(id)
+          ri = MARC::IncomingRecordInfo.new(id)
         else
           abort("\n\nUnknown record set type (neither incoming nor existing).\n\n")
         end
@@ -455,28 +462,31 @@ def get_fields_for_comparison(rec, config)
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
   tags_w_sf_omissions = omitsfspec.keys if omitsfspec
+  
   compare = []
+
   to_compare.each { |cf|
     if cf.class.name == 'MARC::ControlField'
       compare << cf
     else
-      if omitsfspec
-        if tags_w_sf_omissions.include?(cf.tag)
-        sfs_to_omit = omitsfspec[cf.tag].chars
-        newfield = MARC::DataField.new(cf.tag, cf.indicator1, cf.indicator2)
-        cf.subfields.each { |sf|
-          unless sfs_to_omit.include?(sf.code)
-            newsf = MARC::Subfield.new(sf.code, sf.value)
-            newfield.append(newsf)
-          end
-        }
-        compare << newfield
-      else
+      if omitsfspec.is_a?(NilClass)
         compare << cf
+      else
+        if tags_w_sf_omissions.include?(cf.tag)
+          sfs_to_omit = omitsfspec[cf.tag].chars
+          newfield = MARC::DataField.new(cf.tag, cf.indicator1, cf.indicator2)
+          cf.subfields.each { |sf|
+            unless sfs_to_omit.include?(sf.code)
+              newsf = MARC::Subfield.new(sf.code, sf.value)
+              newfield.append(newsf)
+            end
+          }
+          compare << newfield
         end
       end
     end
   }
+
   compare_strings = []
   compare.each { |f|
     fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
@@ -703,8 +713,13 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['set record status by file diff']
       if ri.ovdata.size > 0
         compnew = get_fields_for_comparison(rec, thisconfig)
+        #puts "NEW"
+        #compnew.each { |s| puts s }
         compold = get_fields_for_comparison(exrec, thisconfig)
+        #puts "OLD"
+        #compold.each { |s| puts s }        
         changed_fields = ( compnew - compold ) + ( compold - compnew )
+
 
         if changed_fields.size > 0
           ri.diff_status = 'CHANGE'
@@ -715,6 +730,10 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         ri.diff_status = 'NEW'
       end
     end
+
+    if ri.overlay_type.include?('merge id') && thisconfig['overlay merged records']
+      ri.diff_status = 'CHANGE'
+    end
     
     if ri.diff_status == 'STATIC'
       if thisconfig['incoming record output files']
@@ -724,8 +743,21 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     
     if thisconfig['flag AC recs with changed headings']
       if ri.ovdata.size > 0
-        ac_new = get_fields_by_spec(rec, ac_fields).map { |f| f.to_s }
-        ac_old = get_fields_by_spec(exrec, ac_fields).map { |f| f.to_s }
+        ac_new = []
+        get_fields_by_spec(rec, ac_fields).each { |f|
+          fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+          fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
+          fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
+          ac_new << fs
+        }
+        ac_old = []
+        get_fields_by_spec(exrec, ac_fields).each { |f|
+          fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+          fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
+          fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
+          ac_old << fs
+        }
+          
         changed_headings = (ac_new - ac_old) + (ac_old - ac_new)
         if changed_headings.size > 0
           ri.ac_changed = true
@@ -740,7 +772,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['warn about cat lang']
       catlangs = thisconfig['cat lang']
       reclang = rec.cat_lang
-      ri.warnings << 'Not our language of cataloging' unless catlangs.include?(reclang)
+      if reclang == nil
+        ri.warnings << 'No 040 field, so language of cataloging cannot be checked.'
+      else
+        ri.warnings << 'Not our language of cataloging' unless catlangs.include?(reclang)
+      end
     end
 
     if thisconfig['elvl sets AC status']
@@ -783,6 +819,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         end
       end
     end
+    
+    if thisconfig['check LDR/09 for in-set consistency']
+      #gather this for each record as we loop through, so we can check over the set after
+      ri.character_coding_scheme = rec.leader[9,1]
+    end
 
     if ri.ac_changed
       ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
@@ -800,6 +841,15 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       end
     end
 
+    if thisconfig['write format flag to recs']
+      f = Format.rec_type(rec)
+      if f
+        reced.add_field_with_parameter(thisconfig['format flag MARC spec'], [{'[FORMAT]'=>f}])
+      else
+        ri.warnings << 'Unknown record format'
+      end
+    end
+    
     if thisconfig['add MARC field spec']
       thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
     end
@@ -813,7 +863,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     end
 
     rec = reced.sort_fields
-
+    
     if thisconfig['incoming record output files']
       status = ri.diff_status
       if writers.has_key?(writeconfig[status])
@@ -841,6 +891,8 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
   end
 end
 
+set_warnings = []
+
 if thisconfig['report record status counts on screen']
     puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
     puts "RESULTS"
@@ -848,6 +900,21 @@ if thisconfig['report record status counts on screen']
     in_rec_info.group_by { |ri| ri.diff_status }.each_pair do |k, v|
       puts "#{v.size} #{k} record(s)"
     end
+end
+
+if thisconfig['check LDR/09 for in-set consistency']
+  by_encoding = in_rec_info.group_by { |ri| ri.character_coding_scheme }
+  
+  case by_encoding.keys.size
+  when 2
+    set_warnings << 'Records have different LDR/09 (encoding) values. Split file based on this value, translate non-UTF-8 records to UTF-8, and re-join all records into one file before proceeding.'
+  when 1
+    if by_encoding.keys[0] == ' '
+      set_warnings << 'Records are not UTF-8, according to LDR/09. Unless instructions for the set specifically say otherwise, translate output records to UTF-8 before proceeding.'
+    end
+  else
+    set_warnings << 'Something very odd is going on with LDR/09. Check before proceeding.'
+  end
 end
 
 if thisconfig['produce delete file']
@@ -880,17 +947,22 @@ end
     deletes = ex_rec_info.find_all { |ri| ri.will_be_overlaid_by.size == 0 } if deletes == nil
     puts "#{deletes.size} deletes"
   end
-
-if thisconfig['log warnings']
-  all_warnings = in_rec_info.map { |ri| ri.warnings if ri.warnings.size > 0 }.compact.flatten(1)
-  if all_warnings.size > 0
-    logpath = "#{out_dir}/#{filestem}_log.csv"
-    log = CSV.open(logpath, "wb")
-    log << ['source file', 'output file', 'rec id', 'warning']
-    all_warnings.each { |w| log << w }
-    log.close
+  
+  if thisconfig['log warnings']
+    all_warnings = in_rec_info.map { |ri| ri.warnings if ri.warnings.size > 0 }.compact.flatten(1)
+    if set_warnings.size > 0
+      set_warnings.map! { |w| ['SET', 'SET', 'SET', w] }
+      set_warnings.reverse!.each { |w| all_warnings.unshift(w) }
+    end
+    
+    if all_warnings.size > 0
+      logpath = "#{out_dir}/#{filestem}_log.csv"
+      log = CSV.open(logpath, "w")
+      log << ['source file', 'output file', 'attr_reader :ec id', 'warning']
+      all_warnings.each { |w| log << w }
+      log.close
+    end
   end
-end
 
 
 if thisconfig['incoming record output files']

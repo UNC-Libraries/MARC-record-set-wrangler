@@ -7,6 +7,7 @@ Dir.glob("*.{mrc,mrk,zip}").each { |filename|
   updatetype = pieces.shift
   filetype = pieces.pop
   filedate = pieces.shift
+  filedate.gsub!(/[A-Z]/, '')
   filetime = pieces.shift
   if pieces.size == 2
     segment = pieces.shift
@@ -14,7 +15,7 @@ Dir.glob("*.{mrc,mrk,zip}").each { |filename|
     segment = '_'
   end
   order = pieces.shift
-  newname = "#{segment}_#{filedate}_#{updatetype}_#{order}.#{filetype}"
+  newname = "#{segment}_#{filedate}_ORIG_#{updatetype}_#{order}.#{filetype}"
   File.rename(filename, newname)
 
 }
