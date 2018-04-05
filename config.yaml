@@ -396,6 +396,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+  WCM - AIP:
+    id affix value: 'AIP'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. AIP'
+      - tag: '590'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Provider: American Institute of Physics.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - AGU:
     id affix value: 'AGU'
     add MARC field spec:
