@@ -482,6 +482,8 @@ def get_fields_for_comparison(rec, config)
             end
           }
           compare << newfield
+        else
+          compare << cf
         end
       end
     end
