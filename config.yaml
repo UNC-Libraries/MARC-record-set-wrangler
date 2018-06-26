@@ -968,4 +968,24 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+  WCM - WUBCM:
+    id affix value: 'WUBCM'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. WUBCM'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
+    elvl sets AC status: false
+    add noAC MARC fields: true
+    flag AC recs with changed headings: false
 

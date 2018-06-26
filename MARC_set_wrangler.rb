@@ -50,6 +50,8 @@ def merge_configs(c1, c2)
       v1 + v2
     elsif v1.class.name == 'String'
       v2
+    elsif v1.class.name == 'TrueClass' || 'FalseClass'
+      v2
     else
       v1.merge!(v2)
     end
