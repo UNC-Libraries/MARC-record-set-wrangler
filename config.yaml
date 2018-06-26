@@ -985,6 +985,24 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+      - tag: '590'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Provider: Wiley.'
+      - tag: '915'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: '9'
+            value: 'NOTAUTHO'
+      - tag: '949'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: '*b3=x'
     elvl sets AC status: false
     add noAC MARC fields: true
     flag AC recs with changed headings: false
