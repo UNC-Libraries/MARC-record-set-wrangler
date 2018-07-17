@@ -1,5 +1,5 @@
 ---
-institution: 
+institution:
   main id: '001'
   merge id: '019a'
   cat lang:
@@ -98,9 +98,9 @@ institution:
       i2: '9'
       subfields:
         - delimiter: 'a'
-          value: '[FORMAT]'          
+          value: '[FORMAT]'
   show combined config: false
-  
+
 workflows:
   pre-processing check:
     clean ids:
@@ -166,7 +166,7 @@ workflows:
     log warnings: true
     warn about non-e-resource records: false
     warn about cat lang: false
-    
+
   WCM - compare current full set against last full set downloaded:
     clean ids:
       - find: '[a-zA-Z]'
@@ -367,7 +367,7 @@ workflows:
     warn about cat lang: true
     write warnings to recs: true
     log warnings: true
-    
+
 # settings for individual collections/file segments
 # collections must be set up here to be choosable when script is run
 collections:
@@ -383,11 +383,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. ACS'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: American Chemical Society.'
+            value: 'Content provider: American Chemical Society.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -406,11 +406,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. AIP'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: American Institute of Physics.'
+            value: 'Content provider: American Institute of Physics.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -429,11 +429,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. AGU'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: American Geophysical Union via Wiley Online Library.'
+            value: 'Content provider: American Geophysical Union via Wiley Online Library.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -452,11 +452,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. AMS'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: American Mathematical Society (AMS).'
+            value: 'Content provider: American Mathematical Society (AMS).'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -475,11 +475,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. BEP'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: IGPublish.'
+            value: 'Content provider: IGPublish.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -498,11 +498,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. CHO'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: Cambridge University Press.'
+            value: 'Content provider: Cambridge University Press.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -521,11 +521,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. CIAO'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: CIAO.'
+            value: 'Content provider: CIAO.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -544,11 +544,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. Credo'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: Credo Reference.'
+            value: 'Content provider: Credo Reference.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -570,11 +570,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. CUP'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: Cambridge University Press.'
+            value: 'Content provider: Cambridge University Press.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -593,11 +593,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter German Studies'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
+            value: 'Content provider: De Gruyter.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -616,11 +616,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Columbia'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
+            value: 'Content provider: De Gruyter.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -639,11 +639,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter e-dition'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
+            value: 'Content provider: De Gruyter.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -662,11 +662,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. DGharvard'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
+            value: 'Content provider: De Gruyter.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -685,11 +685,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Penn'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
+            value: 'Content provider: De Gruyter.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -708,11 +708,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Princeton'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
+            value: 'Content provider: De Gruyter.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -731,11 +731,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. EMS'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: European Mathematical Society.'
+            value: 'Content provider: European Mathematical Society.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -777,11 +777,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. GSW'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: GeoScienceWorld.'
+            value: 'Content provider: GeoScienceWorld.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -800,11 +800,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. RSC'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: Royal Society of Chemistry (Great Britain).'
+            value: 'Content provider: Royal Society of Chemistry (Great Britain).'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -823,11 +823,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. SPIE'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: SPIE.'
+            value: 'Content provider: SPIE.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -846,11 +846,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. SPRnew'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: SpringerLink.'
+            value: 'Content provider: SpringerLink.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -869,11 +869,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. SPRgratis'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: SpringerLink.'
+            value: 'Content provider: SpringerLink.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -892,11 +892,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. SPRold'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: SpringerLink.'
+            value: 'Content provider: SpringerLink.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -915,11 +915,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. ScienceDirect'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: Elsevier/ScienceDirect.'
+            value: 'Content provider: Elsevier/ScienceDirect.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -938,11 +938,11 @@ collections:
           - delimiter: 't'
             value: 'OCLC WorldShare Collection Manager managed collection. Serials as monographs'
       - tag: '590'
-        i1: ' '
+        i1: '0'
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Provider: Wiley.'
+            value: 'Content provider: Wiley.'
       - tag: '506'
         i1: '1'
         i2: ' '
