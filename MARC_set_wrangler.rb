@@ -50,7 +50,7 @@ def merge_configs(c1, c2)
       v1 + v2
     elsif v1.class.name == 'String'
       v2
-    elsif v1.class.name == 'TrueClass' || 'FalseClass'
+    elsif v1.class.name == 'TrueClass' || v1.class.name == 'FalseClass'
       v2
     else
       v1.merge!(v2)
@@ -155,7 +155,7 @@ class AuthorityControlStatus
   def initialize(spec)
     @elvl_to_ac_map = spec
   end
-  
+
   def get_by_elvl(elvl)
     @elvl_to_ac_map[elvl]
   end
@@ -327,7 +327,7 @@ module Format
       'VM:streaming video' if rec['008'].value[33,1] =~ /[fmv]/
     end
   end
-  
+
 end
 
 # Produces array of RecInfo structs from the MARC files in a directory
@@ -403,7 +403,7 @@ def make_rec_info_hash(ri_array)
     abort("\n\nSCRIPT FAILURE!\nDUPLICATE RECORDS IN #{name} RECORD FILE(S):\nMultiple records in your #{name.downcase} record file(s) have the same 001 value(s).\nAffected 001 values: #{ids_duplicated.join(', ')}\nPlease duplicate your #{name.downcase} file(s) and try the script again.\n\n")
   else
     return thehash
-  end  
+  end
 end
 
 def clean_id(rec, idfields, spec)
@@ -464,7 +464,7 @@ def get_fields_for_comparison(rec, config)
   to_omit = get_fields_by_spec(rec, omitfspec)
   to_compare = rec.reject { |f| to_omit.include?(f) }
   tags_w_sf_omissions = omitsfspec.keys if omitsfspec
-  
+
   compare = []
 
   to_compare.each { |cf|
@@ -496,7 +496,7 @@ def get_fields_for_comparison(rec, config)
     fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
     fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
     fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
-    compare_strings << fs 
+    compare_strings << fs
   }
   compare_strings.sort!
   return compare_strings.uniq
@@ -533,7 +533,7 @@ class MarcEdit
         f.append(sf)
       }
       @rec.append(f)
-    } 
+    }
   end
 
   def sort_fields
@@ -585,7 +585,7 @@ class MergeIdManipulator
   attr_reader :rec
   attr_reader :recinfo
   attr_reader :ex_rec_id
-  
+
   def initialize(rec, recinfo)
     @rec = rec
     @recinfo = recinfo
@@ -709,11 +709,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['use existing record set']
       if ri.ovdata.size > 0
         ex_ri = ri.ovdata[0]
-        reader = MARC::Reader.new(ex_ri.lookupfile) 
+        reader = MARC::Reader.new(ex_ri.lookupfile)
         exrec = reader.first
       end
     end
-    
+
     if thisconfig['set record status by file diff']
       if ri.ovdata.size > 0
         compnew = get_fields_for_comparison(rec, thisconfig)
@@ -721,7 +721,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         #compnew.each { |s| puts s }
         compold = get_fields_for_comparison(exrec, thisconfig)
         #puts "OLD"
-        #compold.each { |s| puts s }        
+        #compold.each { |s| puts s }
         changed_fields = ( compnew - compold ) + ( compold - compnew )
 
 
@@ -738,13 +738,13 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if ri.overlay_type.include?('merge id') && thisconfig['overlay merged records']
       ri.diff_status = 'CHANGE'
     end
-    
+
     if ri.diff_status == 'STATIC'
       if thisconfig['incoming record output files']
         next if thisconfig['incoming record output files']['STATIC'] == 'do not output'
       end
     end
-    
+
     if thisconfig['flag AC recs with changed headings']
       if ri.ovdata.size > 0
         ac_new = []
@@ -761,14 +761,14 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
           fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
           ac_old << fs
         }
-          
+
         changed_headings = (ac_new - ac_old) + (ac_old - ac_new)
         if changed_headings.size > 0
           ri.ac_changed = true
         end
       end
     end
-    
+
     if thisconfig['warn about non-e-resource records']
       ri.warnings << 'Not an e-resource record?' unless rec.is_e_rec? == 'yes'
     end
@@ -797,11 +797,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
 
     # start actually editing records
     reced = MarcEdit.new(rec)
-    
+
     if thisconfig['overlay merged records']
       rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
     end
-    
+
     if thisconfig['clean ids']
       rec = cleaner.clean_record(rec, idfields)
     end
@@ -815,7 +815,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       this_replace = [{'[RECORDSTATUS]'=>ri.diff_status}]
       reced.add_field_with_parameter(this_spec, this_replace)
     end
-    
+
     if thisconfig['flag overlay type']
       if ri.overlay_type.size > 0
         ri.overlay_type.each do |type|
@@ -823,7 +823,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         end
       end
     end
-    
+
     if thisconfig['check LDR/09 for in-set consistency']
       #gather this for each record as we loop through, so we can check over the set after
       ri.character_coding_scheme = rec.leader[9,1]
@@ -832,7 +832,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if ri.ac_changed
       ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
     end
-    
+
     case ri.under_ac
     when true
       if thisconfig['add AC MARC fields']
@@ -853,7 +853,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
         ri.warnings << 'Unknown record format'
       end
     end
-    
+
     if thisconfig['add MARC field spec']
       thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
     end
@@ -867,7 +867,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     end
 
     rec = reced.sort_fields
-    
+
     if thisconfig['incoming record output files']
       status = ri.diff_status
       if writers.has_key?(writeconfig[status])
@@ -885,11 +885,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       out_mrc.write(rec)
       ri.outfile = out_mrc.fh.path
     end
-    
+
     if thisconfig['log warnings']
       ri.warnings.map! { |w| [ri.sourcefile, ri.outfile, ri.id, w] }
     end
-    
+
     #puts "\n#{rec}"
     #pp(ri)
   end
@@ -908,7 +908,7 @@ end
 
 if thisconfig['check LDR/09 for in-set consistency']
   by_encoding = in_rec_info.group_by { |ri| ri.character_coding_scheme }
-  
+
   case by_encoding.keys.size
   when 2
     set_warnings << 'Records have different LDR/09 (encoding) values. Split file based on this value, translate non-UTF-8 records to UTF-8, and re-join all records into one file before proceeding.'
@@ -951,14 +951,14 @@ end
     deletes = ex_rec_info.find_all { |ri| ri.will_be_overlaid_by.size == 0 } if deletes == nil
     puts "#{deletes.size} deletes"
   end
-  
+
   if thisconfig['log warnings']
     all_warnings = in_rec_info.map { |ri| ri.warnings if ri.warnings.size > 0 }.compact.flatten(1)
     if set_warnings.size > 0
       set_warnings.map! { |w| ['SET', 'SET', 'SET', w] }
       set_warnings.reverse!.each { |w| all_warnings.unshift(w) }
     end
-    
+
     if all_warnings.size > 0
       logpath = "#{out_dir}/#{filestem}_log.csv"
       log = CSV.open(logpath, "w")
@@ -974,7 +974,7 @@ if thisconfig['incoming record output files']
   writer_list.each { |w| writers[w].close }
 else
   out_mrc.close
-end 
+end
 
 puts "\n\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\nAll important work is done! It's safe to use the files in the output directory now.\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n"
 puts "It's going to take me a while to finish cleaning up my working files, though..."
