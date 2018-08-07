@@ -44,9 +44,9 @@ def merge_configs(c1, c2)
   c1.merge!(c2) { |k, v1, v2|
     if k == 'id affix value'
       "#{v1}#{v2}"
-    elsif v1.class.name == 'Boolean'
+    elsif v1.is_a?(TrueClass) || v1.is_a?(FalseClass)
       v2
-    elsif v1.class.name == 'Array'
+    elsif v1.is_a?(Array)
       v1 + v2
     elsif v1.class.name == 'String'
       v2
@@ -800,6 +800,13 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
 
     if thisconfig['overlay merged records']
       rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
+      if thisconfig['flag overlay type']
+        ri.overlay_type.each do |otype|
+          this_spec = thisconfig['overlay type flag spec']
+          this_replace = [{'[OVTYPE]'=>otype}]
+          reced.add_field_with_parameter(this_spec, this_replace)
+        end
+      end
     end
 
     if thisconfig['clean ids']
@@ -815,6 +822,7 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       this_replace = [{'[RECORDSTATUS]'=>ri.diff_status}]
       reced.add_field_with_parameter(this_spec, this_replace)
     end
+<<<<<<< Updated upstream
 
     if thisconfig['flag overlay type']
       if ri.overlay_type.size > 0
@@ -824,6 +832,9 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       end
     end
 
+=======
+    
+>>>>>>> Stashed changes
     if thisconfig['check LDR/09 for in-set consistency']
       #gather this for each record as we loop through, so we can check over the set after
       ri.character_coding_scheme = rec.leader[9,1]

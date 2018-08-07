@@ -583,15 +583,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-  WCM - DGger:
-    id affix value: 'DGger'
+  WCM - DGcolumbia:
+    id affix value: 'DGcolumbia'
     add MARC field spec:
       - tag: '773'
         i1: '1'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter German Studies'
+            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Columbia'
       - tag: '590'
         i1: '0'
         i2: ' '
@@ -606,15 +606,15 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-  WCM - DGcolumbia:
-    id affix value: 'DGcolumbia'
+  WCM - DGcornell:
+    id affix value: 'DGcornell'
     add MARC field spec:
       - tag: '773'
         i1: '1'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Columbia'
+            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Cornell'
       - tag: '590'
         i1: '0'
         i2: ' '
@@ -652,6 +652,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+  WCM - DGger:
+    id affix value: 'DGger'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter German Studies'
+      - tag: '590'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Provider: De Gruyter.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - DGharvard:
     id affix value: 'DGharvard'
     add MARC field spec:
@@ -675,6 +698,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+  WCM - DGhawaii:
+    id affix value: 'DGhawaii'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Hawaii'
+      - tag: '590'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Provider: De Gruyter.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - DGpenn:
     id affix value: 'DGpenn'
     add MARC field spec:
@@ -683,7 +729,7 @@ collections:
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Penn'
+            value: 'OCLC WorldShare Collection Manager managed collection. DGpenn'
       - tag: '590'
         i1: '0'
         i2: ' '
