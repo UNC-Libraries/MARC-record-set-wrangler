@@ -300,7 +300,7 @@ module Format
       case rec['008'].value[25,1]
       when 'e'
         'MP:atlas'
-      when 'a'
+      else
         'MP:map'
       end
     when 'MIX'
@@ -324,7 +324,11 @@ module Format
         'CR:integrating resource'
       end
     when 'VIS'
-      'VM:streaming video' if rec['008'].value[33,1] =~ /[fmv]/
+      if rec['008'].value[33,1] =~ /[fmv]/
+        'VM:streaming video'
+      elsif rec['008'].value[33,1] =~ /[aciklnost]/
+        'VM:image'
+      end
     end
   end
 
