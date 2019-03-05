@@ -100,6 +100,7 @@ institution:
         - delimiter: 'a'
           value: '[FORMAT]'
   show combined config: false
+  log process: false
 
 workflows:
   pre-processing check:
@@ -201,6 +202,8 @@ workflows:
       - tag: '938'
       - tag: '949'
       - tag: '994'
+      - tag: '996'
+        field has: '(ebook|video)'
       - tag: '999'
     omit from comparison subfields:
       '040': 'cd'
