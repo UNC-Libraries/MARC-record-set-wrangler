@@ -8,6 +8,7 @@ require 'lib/marc_record'
 require 'highline/import'
 require 'pp'
 require 'fileutils'
+require 'date'
 
 puts "\n\n"
 
@@ -342,7 +343,7 @@ def get_rec_info(dir, label)
   infiles = Dir.glob("#{dir}/*.mrc")
   if infiles.size > 0
     infiles.each { |file|
-      sourcefile = "#{dir}/#{file}"
+      sourcefile = "#{file}"
       puts "  - #{sourcefile}"
       MARC::Reader.new(file).each { |rec|
         recid = begin
@@ -404,7 +405,7 @@ def make_rec_info_hash(ri_array)
     else
       name = 'INCOMING'
     end
-    abort("\n\nSCRIPT FAILURE!\nDUPLICATE RECORDS IN #{name} RECORD FILE(S):\nMultiple records in your #{name.downcase} record file(s) have the same 001 value(s).\nAffected 001 values: #{ids_duplicated.join(', ')}\nPlease duplicate your #{name.downcase} file(s) and try the script again.\n\n")
+    abort("\n\nSCRIPT FAILURE!\nDUPLICATE RECORDS IN #{name} RECORD FILE(S):\nMultiple records in your #{name.downcase} record file(s) have the same 001 value(s).\nAffected 001 values: #{ids_duplicated.join(', ')}\nPlease de-duplicate your #{name.downcase} file(s) and try the script again.\n\n")
   else
     return thehash
   end
@@ -626,7 +627,11 @@ end
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Do the actual things...
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
+if thisconfig['log process']
+      processlogpath = "#{out_dir}/#{filestem}_process_log.csv"
+      processlog = CSV.open(processlogpath, "w")
+      processlog << ['timestamp', 'source file', 'rec id', 'message']
+end
 
 # Pull in our incoming and, if relevant, previously loaded MARC records
 rec_info_sets = []
@@ -643,6 +648,9 @@ if thisconfig['clean ids']
   puts "\n\nCleaning IDs in record info..."
   rec_info_sets.each { |set|
     set.each { |rec_info|
+      if thisconfig['log process']
+        processlog << [DateTime.now.to_s, rec_info.sourcefile, rec_info.id, 'cleaning id']
+      end
       rec_info.id = cleaner.clean(rec_info.id)
       if rec_info.mergeids.size > 0
         rec_info.mergeids.each { |mid|
@@ -710,6 +718,11 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     end
     ri = in_info[id_val]
 
+    if thisconfig['log process']
+      processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'begin processing MARC record']
+    end
+
+
     if thisconfig['use existing record set']
       if ri.ovdata.size > 0
         ex_ri = ri.ovdata[0]
@@ -720,10 +733,18 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
 
     if thisconfig['set record status by file diff']
       if ri.ovdata.size > 0
+
         compnew = get_fields_for_comparison(rec, thisconfig)
+        if thisconfig['log process']
+          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'got fields for comparison from incoming record']
+        end
+            
         #puts "NEW"
         #compnew.each { |s| puts s }
         compold = get_fields_for_comparison(exrec, thisconfig)
+        if thisconfig['log process']
+          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'get fields for comparison from existing record']
+        end
         #puts "OLD"
         #compold.each { |s| puts s }
         changed_fields = ( compnew - compold ) + ( compold - compnew )
@@ -751,6 +772,9 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
 
     if thisconfig['flag AC recs with changed headings']
       if ri.ovdata.size > 0
+        if thisconfig['log process']
+          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'flagging AC status']
+        end
         ac_new = []
         get_fields_by_spec(rec, ac_fields).each { |f|
           fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
@@ -801,6 +825,10 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
 
     # start actually editing records
     reced = MarcEdit.new(rec)
+
+    if thisconfig['log process']
+      processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'applying edits to MARC record']
+    end
 
     if thisconfig['overlay merged records']
       rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
@@ -893,9 +921,6 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     if thisconfig['log warnings']
       ri.warnings.map! { |w| [ri.sourcefile, ri.outfile, ri.id, w] }
     end
-
-    #puts "\n#{rec}"
-    #pp(ri)
   end
 end
 
@@ -972,6 +997,9 @@ end
     end
   end
 
+  if thisconfig['log process']
+    processlog.close
+  end
 
 if thisconfig['incoming record output files']
   writer_list = writers.keys
