@@ -560,6 +560,30 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+  WCM - CRL:
+    process_wcm_coverage: true
+    id affix value: 'CRL'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. CRL'
+      - tag: '590'
+        i1: '0'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Content provider: Center for Research Libraries.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - CUP:
     clean ids:
       - find: 'wcmcup'

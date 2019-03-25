@@ -5,10 +5,13 @@ require 'csv'
 require 'yaml'
 require 'marc'
 require 'lib/marc_record'
+require 'lib/process_holdings'
 require 'highline/import'
 require 'pp'
 require 'fileutils'
 require 'date'
+
+include ProcessHoldings
 
 puts "\n\n"
 
@@ -830,6 +833,12 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
       processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'applying edits to MARC record']
     end
 
+    if thisconfig['process_wcm_coverage']
+      result = ProcessHoldings::process_holdings(rec)
+      rec = result[0] if result
+      ri.warnings << result[1].gsub('ERROR - ', '') if result[1].match('ERROR')
+    end
+    
     if thisconfig['overlay merged records']
       rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
     end
