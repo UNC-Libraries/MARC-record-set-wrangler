@@ -1,101 +1,113 @@
 # encoding: UTF-8
 
-require 'date'
-require 'marc'
+require 'marc_wrangler'
 
-module ProcessHoldings
-  def process_holdings(rec)
-    the996s = rec.fields.find_all { |f| f.tag == '996' && f.value.include?('fulltext') }
+module MarcWrangler
+  module ProcessHoldings
+    def process_holdings(rec)
+      the996 = get_996(rec)
 
-    if the996
-      dates = rec['996']['d']
-      enum = rec['996']['e']
-      
-      summary_parts = []
-      if dates && split_holdings(dates)
-        dates = split_holdings(dates)
-        dates = process_pairs(dates)
-        dates.each do |e|
-          if e.length == 1
-            summary_parts << format_date(e[0])
-          else
-            summary_parts << "#{format_date(e[0])} - #{format_date(e[1])}"
-          end
-        end
-      elsif enum && split_holdings(enum)
-        enum = split_holdings(enum) 
-        enum.each { |e| fix_enum(e) }
-        enum = process_pairs(enum)
-        enum.each do |e|
-          if e.length == 1
-            summary_parts << e[0]
-          else
-            summary_parts << "#{e[0]} - #{e[1]}"
-          end
-        end
+      if the996
+        summary = derive_summary(the996['d'], the996['e'])
+        summary = replace_long_summary(summary, 500)
       else
-        summary = 'ERROR - coverage data empty after processing'
+        summary = ''
       end
 
-      summary = summary_parts.join('; ') if summary_parts.length > 0
-      summary = 'ERROR - no coverage summary created' if summary == ''
-      
-      unless summary.match('ERROR')
-        rec['856'].append(MARC::Subfield.new('3', "Full text coverage: #{summary}"))
+      rec = write_summary_to_856(rec, summary) unless summary.match('ERROR')
+      return [rec, summary]
+    end
+
+    def write_summary_to_856(rec, summary)
+      rec['856'].append(MARC::Subfield.new('3', "Full text coverage: #{summary}"))
+      rec
+    end
+
+    def replace_long_summary(summary, length)
+      summary = 'Not all issues have been digitized. View resource for full text availability details.' if summary.length > length
+      summary
+    end
+
+    def format_summary(data, category)
+      data.each { |e| fix_enum(e) } if category == :enum
+
+      ranges = process_ranges(data)
+      to_join = []
+      ranges.each do |r|
+        r.map! { |e| format_date(e) } if category == :date
+        if r.length == 1
+          to_join << r.first
+        else
+          to_join << "#{r[0]} - #{r[1]}"
+        end
       end
-    else
-      summary = ''
+
+      return to_join.join('; ')
     end
     
-    return [rec, summary]
-  end
-
-  def split_holdings(data)
-    data.split(/ ?fulltext@?/).reject! { |e| e == '' }
-  end
-
-  def fix_enum(data)
-    data.gsub!('volume:', 'v.')
-    data.gsub!('issue:', 'no.')
-    data.gsub!(';', ':')
-  end
-
-  def process_pairs(array)
-    output = []
-    array.each do |pair|
-      pa = pair.split('~')
-      output << pa.uniq
+    def derive_summary(dates, enum)
+      if dates && split_holdings(dates)
+        summary = format_summary(split_holdings(dates), :date)
+      elsif enum && split_holdings(enum)
+        summary = format_summary(split_holdings(enum), :enum)
+      else
+        summary = 'ERROR - no usable coverage data'
+      end
+      return summary
     end
-    return output
-  end
+    
+    # returns the shortest fulltext 996 from record or returns nil
+    def get_996(rec)
+      all_996s = rec.fields.find_all { |f| f.tag == '996' && f.value.include?('fulltext') }
+      case all_996s.length
+      when 1
+        return all_996s.first
+      when 0
+        return nil
+      else
+        return get_shortest_field(all_996s)
+      end
+    end
 
-  def format_date(date)  
-    pieces = date.split('-')
-    case pieces.length
-    when 1
-      return pieces[0]
-    when 2
-      d = Date.new(pieces[0].to_i, pieces[1].to_i, 1)
-      return d.strftime('%b %Y')
-    when 3
-      d = Date.new(pieces[0].to_i, pieces[1].to_i, pieces[2].to_i)
-      return d.strftime('%b %-d, %Y')
+    # gets shortest field from an array of fields
+    def get_shortest_field(fields)
+      fields = fields.sort_by { |f| f.value.length }
+      fields.first
+    end
+
+    # splits multiple holdings statements in one field into an array of statements
+    # drops empty holdings statements
+    def split_holdings(data)
+      data.split(/ ?fulltext@?/).reject! { |e| e == '' }
+    end
+
+    def fix_enum(data)
+      data.gsub!('volume:', 'v.')
+      data.gsub!('issue:', 'no.')
+      data.gsub!(';', ':')
+    end
+
+    def process_ranges(array)
+      output = []
+      array.each do |pair|
+        pa = pair.split('~')
+        output << pa.uniq
+      end
+      return output
+    end
+
+    def format_date(date)  
+      pieces = date.split('-')
+      case pieces.length
+      when 1
+        return pieces[0]
+      when 2
+        d = Date.new(pieces[0].to_i, pieces[1].to_i, 1)
+        return d.strftime('%b %Y')
+      when 3
+        d = Date.new(pieces[0].to_i, pieces[1].to_i, pieces[2].to_i)
+        return d.strftime('%b %-d, %Y')
+      end
     end
   end
-
-  #   errs = []
-  #   writer = MARC::Writer('output/with_holdings.mrc')
-  
-  # MARC::Reader.new('incoming_marc/20190315_ORIG_updates_ser.mrc').each do |rec|  
-  # #MARC::Reader.new('test996.mrc').each do |rec|
-  #   summary = process_holdings(rec)
-  #   errs << summary if summary.match('ERROR')
-  #   writer.write(rec)
-  # end
-
-  # writer.close
-
-  # File.open "output/holdings_generation_errors.txt", "wb" do |f|
-  #   errs.each {|l| f.puts l}
-  # end
 end

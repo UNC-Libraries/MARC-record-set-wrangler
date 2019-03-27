@@ -1,5 +1,7 @@
-require "bundler/setup"
-require "marc_wrangler"
+$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
+require 'bundler/setup'
+require 'marc_wrangler'
+require 'spec_util'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -12,3 +14,4 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 end
+
