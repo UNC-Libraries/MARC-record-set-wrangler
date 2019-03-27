@@ -4,18 +4,33 @@ require 'marc_wrangler'
 
 module MarcWrangler
   module ProcessHoldings
+
+    FALLOVER_SUMMARY = 'Not all issues have been digitized. View resource for full text availability details.'
+    MAX_LENGTH = 250
+    
     def process_holdings(rec)
+      result = {}
+
       the996 = get_996(rec)
 
       if the996
         summary = derive_summary(the996['d'], the996['e'])
-        summary = replace_long_summary(summary, 500)
+        length_chk = replace_long_summary(summary, MAX_LENGTH)
+        summary = length_chk[0]
+        result[:msg] = length_chk[1] unless length_chk[1] == ''
       else
         summary = ''
       end
 
-      rec = write_summary_to_856(rec, summary) unless summary.match('ERROR')
-      return [rec, summary]
+      if summary == ''
+        result[:rec] = rec
+      elsif summary['ERROR']
+        result[:rec] = write_summary_to_856(rec, FALLOVER_SUMMARY)
+        result[:msg] = summary
+      else
+        result[:rec] = write_summary_to_856(rec, summary)
+      end
+      return result
     end
 
     def write_summary_to_856(rec, summary)
@@ -24,8 +39,12 @@ module MarcWrangler
     end
 
     def replace_long_summary(summary, length)
-      summary = 'Not all issues have been digitized. View resource for full text availability details.' if summary.length > length
-      summary
+      info = ''
+      if summary.length > length
+        summary =  FALLOVER_SUMMARY
+        info = 'INFO: long coverage data replaced with standard coverage statement'
+      end        
+      return [summary, info]
     end
 
     def format_summary(data, category)

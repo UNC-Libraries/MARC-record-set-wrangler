@@ -6,12 +6,28 @@ RSpec.describe MarcWrangler::ProcessHoldings do
   include SpecUtil
 
   describe 'process_holdings' do
-    it 'adds 856$3 from 996 coverage data' do
+    it 'adds 856$3 from 996 fulltext coverage data' do
       rec = make_rec
       rec << MARC::DataField.new('996', ' ', ' ', ['d', 'fulltext@1969-01~1970-04'], ['e', 'fulltext@volume:1;issue:1~volume:2;issue:1'])
       rec << MARC::DataField.new('856', '4', '0', ['u', 'https://ex.it'])
-      rec = process_holdings(rec)[0]
+      rec = process_holdings(rec)[:rec]
       expect(rec['856']['3']).to eq('Full text coverage: Jan 1969 - Apr 1970')
+    end
+
+    it 'adds fallover 856$3 from 996 fulltext coverage data errors' do
+      rec = make_rec
+      rec << MARC::DataField.new('996', ' ', ' ', ['d', 'fulltext fulltext@ fulltext'], ['e', 'fulltext fulltext@ fulltext'])
+      rec << MARC::DataField.new('856', '4', '0', ['u', 'https://ex.it'])
+      rec = process_holdings(rec)[:rec]
+      expect(rec['856']['3']).to eq('Full text coverage: Not all issues have been digitized. View resource for full text availability details.')
+    end
+
+    it 'does not add 856$3 from 996 ebook coverage data' do
+      rec = make_rec
+      rec << MARC::DataField.new('996', ' ', ' ', ['d', 'ebook'], ['e', 'ebook'])
+      rec << MARC::DataField.new('856', '4', '0', ['u', 'https://ex.it'])
+      rec = process_holdings(rec)[:rec]
+      expect(rec['856']['3']).to be_nil
     end
   end
 
@@ -81,11 +97,13 @@ RSpec.describe MarcWrangler::ProcessHoldings do
 
   describe 'replace_long_summary' do
     it 'passes through summaries shorter than given length' do
-      expect(replace_long_summary('abc', 5)).to eq('abc')
+      expect(replace_long_summary('abc', 5)).to eq(['abc', ''])
     end
-    it 'replaces summaries longer than given length with standard value' do
+
+    it 'replaces summaries longer than given length with standard value and generates info for logs' do
       summary = 'abcdefg'
-      result = 'Not all issues have been digitized. View resource for full text availability details.'
+      result = ['Not all issues have been digitized. View resource for full text availability details.',
+                'INFO: long coverage data replaced with standard coverage statement']
       expect(replace_long_summary(summary, 5)).to eq(result)
     end
   end

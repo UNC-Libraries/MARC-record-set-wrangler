@@ -1,17 +1,20 @@
 # encoding: UTF-8
 
 $LOAD_PATH << '.'
+$LOAD_PATH.unshift File.expand_path('lib', __dir__)
 require 'csv'
 require 'yaml'
 require 'marc'
-require 'lib/marc_record'
-require 'lib/process_holdings'
+require 'lib/marc_wrangler'
+require 'lib/marc_wrangler/marc_record'
+require 'lib/marc_wrangler/process_holdings'
 require 'highline/import'
 require 'pp'
 require 'fileutils'
 require 'date'
 
-include ProcessHoldings
+include MarcWrangler
+include MarcWrangler::ProcessHoldings
 
 puts "\n\n"
 
@@ -166,10 +169,10 @@ class AuthorityControlStatus
 end
 
 # Set up in/out directories
-in_dir = 'incoming_marc'
-ex_dir = 'existing_marc'
-out_dir = 'output'
-wrk_dir = 'working'
+in_dir = 'data/incoming_marc'
+ex_dir = 'data/existing_marc'
+out_dir = 'data/output'
+wrk_dir = 'data/working'
 
 # Set up MARC writers
 filestem = Dir.glob("#{in_dir}/*.mrc")[0].gsub!(/^.*\//, '').gsub!(/\.mrc/, '').gsub!(/_ORIG/, '')
@@ -834,9 +837,9 @@ Dir.glob("#{in_dir}/*.mrc").each do |in_file|
     end
 
     if thisconfig['process_wcm_coverage']
-      result = ProcessHoldings::process_holdings(rec)
-      rec = result[0] if result
-      ri.warnings << result[1].gsub('ERROR - ', '') if result[1].match('ERROR')
+      result = ProcessHoldings.process_holdings(rec)
+      rec = result[:rec] if result
+      ri.warnings << result[:msg].gsub('ERROR - ', '') if result[:msg]
     end
     
     if thisconfig['overlay merged records']
