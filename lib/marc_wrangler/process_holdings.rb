@@ -5,7 +5,7 @@ require 'marc'
 
 module ProcessHoldings
   def process_holdings(rec)
-    the996 = rec.fields.find { |f| f.tag == '996' && f.value.include?('fulltext') }
+    the996s = rec.fields.find_all { |f| f.tag == '996' && f.value.include?('fulltext') }
 
     if the996
       dates = rec['996']['d']
