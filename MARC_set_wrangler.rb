@@ -301,8 +301,14 @@ module Format
     case rec.record_type
     when 'BKS'
       'BK:ebook'
-    when 'SCO'
-      'MU:score'
+    when 'COM'
+      if rec.bibliographic_level == 'Monograph/Item'
+        if rec['336']
+          'BK:ebook' if rec['336'].to_s =~ /text|txt/i
+        elsif rec['996']
+          'BK:ebook' if rec['996'].to_s['ebook']
+        end
+      end
     when 'MAP'
       case rec['008'].value[25,1]
       when 'e'
@@ -323,6 +329,8 @@ module Format
       when 'j'
         'MU:streaming audio'
       end
+    when 'SCO'
+      'MU:score'
     when 'SER'
       case rec.leader.get_blvl_code
       when 's'
@@ -360,7 +368,7 @@ def get_rec_info(dir, label)
         case label
         when 'existing'
           ri = MARC::ExistingRecordInfo.new(id)
-          mypath = "working/#{rec_increment}.mrc"
+          mypath = "data/working/#{rec_increment}.mrc"
           writer = MARC::Writer.new(mypath)
           writer.write(rec)
           writer.close
@@ -1021,9 +1029,9 @@ else
 end
 
 puts "\n\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\nAll important work is done! It's safe to use the files in the output directory now.\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n"
-puts "It's going to take me a while to finish cleaning up my working files, though..."
+puts "It may take me a while to finish cleaning up my working files, though..."
 ObjectSpace.each_object(IO) {|x| x.close }
 
 #FileUtils.remove_dir('working', force = true)
-FileUtils.rm Dir.glob('working/*.mrc'), :force => true
+FileUtils.rm Dir.glob('data/working/*.mrc'), :force => true
 #puts "\nDone!\n\n"

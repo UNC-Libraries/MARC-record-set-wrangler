@@ -1,4 +1,4 @@
-Dir.chdir('incoming_marc')
+Dir.chdir('data/incoming_marc')
 
 Dir.glob("*.{mrc,mrk,zip}").each { |filename|
   pieces = filename.split('.')
