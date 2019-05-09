@@ -191,10 +191,18 @@ workflows:
       - tag: '005'
       - tag: '019'
       - tag: '035'
+      - tag: '049'
+      - tag: '072'    
+      - tag: '082'
       - tag: '506'
       - tag: '590'
       - tag: '598'
         field has: 'Reason for updated record:'
+      - tag: '6(00|10|11|30|47|48|50|51|55)'
+        i2: '[456]'
+      - tag: '6(00|10|11|30|47|48|50|51|55)'
+        i2: '7'
+        field does not have: '(aat|fast|gmgpc|gsafd|lcgft|lcsh|lctgm|mesh|naf|nasat|rbbin|rbgenr|rbmscv|rbpap|rbpri|rbprov|rbpub|rbtyp)'
       - tag: '655'
         field has: 'Electronic book'
       - tag: '773'
@@ -246,26 +254,7 @@ workflows:
     write format flag to recs: true
     log warnings: true
     set record status by file diff: false
-    #omit from comparison fields:
-    #  - tag: '005'
-    #  - tag: '019'
-    #  - tag: '035'
-    #  - tag: '040'
-    #    subfields: 'd'
-    #  - tag: '598'
-    #    field has: 'Reason for updated record:'
-    #  - tag: '655'
-    #    field has: 'Electronic book'
-    #  - tag: '938'
-    #  - tag: '994'
-    #  - tag: '999'
-    #omit from comparison subfields:
-    #  '040': 'cd'
     flag rec status: false
-    #incoming record output files:
-    #  CHANGE: '_change'
-    #  STATIC: '_static'
-    #  ADD: '_add'
     produce delete file: false
     elvl sets AC status: true
     add AC MARC fields: false
@@ -312,8 +301,11 @@ workflows:
       - tag: '520'
       - tag: '598'
         field has: 'Reason for updated record:'
-      - tag: '6..'
+      - tag: '6(00|10|11|30|47|48|50|51|55)'
+        i2: '[456]'
+      - tag: '6(00|10|11|30|47|48|50|51|55)'
         i2: '7'
+        field does not have: '(aat|fast|gmgpc|gsafd|lcgft|lcsh|lctgm|mesh|rbbin|rbgenr|rbmscv|rbpap|rbpri|rbprov|rbpub|rbtyp)'
       - tag: '653'
       - tag: '655'
         field has: '(Electronic (book|reference source)|e-?book|Drama|downloadable)'
@@ -552,6 +544,30 @@ collections:
         subfields:
           - delimiter: 'a'
             value: 'Content provider: Credo Reference.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
+  WCM - CRL:
+    process_wcm_coverage: true
+    id affix value: 'CRL'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. CRL'
+      - tag: '590'
+        i1: '0'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Content provider: Center for Research Libraries.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -862,6 +878,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+  WCM - NumPrem:
+    id affix value: 'NumPrem'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. Numerique Premium'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
+      - tag: '590'
+        i1: '0'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Content provider: Numerique Premium.'
   WCM - PsychNet:
     id affix value: 'PsychNet'
     add MARC field spec:
