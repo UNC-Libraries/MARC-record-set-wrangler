@@ -8,10 +8,13 @@
 !/data/incoming_marc
 !/data/existing_marc
 !/data/output
+!/data/working
 /data/incoming_marc/*
 /data/existing_marc/*
 /data/output/*
+/data/working/*
 !/data/incoming_marc/_README.txt
 !/data/existing_marc/_README.txt
 !/data/output/_README.txt
+!/data/working/_README.txt
 /pkg
