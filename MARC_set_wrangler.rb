@@ -1011,7 +1011,7 @@ end
     if all_warnings.size > 0
       logpath = "#{out_dir}/#{filestem}_log.csv"
       log = CSV.open(logpath, "w")
-      log << ['source file', 'output file', 'attr_reader :ec id', 'warning']
+      log << ['source file', 'output file', 'rec id', 'warning']
       all_warnings.each { |w| log << w }
       log.close
     end
