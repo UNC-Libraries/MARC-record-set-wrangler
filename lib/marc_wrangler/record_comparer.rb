@@ -19,30 +19,8 @@ module MarcWrangler
       self.class.flag_omitted_fields(@ex_ri_fields, omitted_fields_spec)
     end
 
-    def self.get_fields_by_spec(fields, spec)
-      acc = []
-      spec.each do |fspec|
-        tmpfields = fields.select { |f| f.tag =~ /#{fspec['tag']}/ }
-        if fspec.has_key?('i1')
-          tmpfields.select! { |f| f.indicator1 =~ /#{fspec['i1']}/ }
-        end
-        if fspec.has_key?('i2')
-          tmpfields.select! { |f| f.indicator2 =~ /#{fspec['i2']}/ }
-        end
-        if fspec.has_key?('field has')
-          tmpfields.select! { |f| f.to_s =~ /#{fspec['field has']}/i }
-        end
-        if fspec.has_key?('field does not have')
-          tmpfields.reject! { |f| f.to_s =~ /#{fspec['field does not have']}/i }
-        end
-        tmpfields.each { |f| acc << f }
-      end
-
-      acc
-    end
-
     def self.flag_omitted_fields(fields, spec)
-      self.get_fields_by_spec(fields, spec).each { |f| f.omitted = true }
+      Config.get_fields_by_spec(fields, spec).each { |f| f.omitted = true }
     end
 
     def flag_ac_fields
@@ -52,7 +30,7 @@ module MarcWrangler
     end
 
     def self.flag_ac_fields(fields, spec)
-      self.get_fields_by_spec(fields, spec).each { |f| f.ac = true }
+      Config.get_fields_by_spec(fields, spec).each { |f| f.ac = true }
     end
 
     def static?
