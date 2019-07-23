@@ -6,9 +6,6 @@ require 'csv'
 require 'yaml'
 require 'marc'
 require 'lib/marc_wrangler'
-require 'lib/marc_wrangler/marc_record'
-require 'lib/marc_wrangler/process_holdings'
-require 'marc_wrangler/record_info.rb'
 require 'highline/import'
 require 'pp'
 require 'fileutils'
@@ -283,6 +280,7 @@ end
 
 if thisconfig['set record status by file diff']
   omission_spec = thisconfig['omit from comparison fields']
+  omit_005 = omission_spec.find { |n| n["tag"] == "005" && n.length == 1}
   omission_spec_sf = thisconfig['omit from comparison subfields']
 end
 
@@ -360,38 +358,41 @@ def get_rec_info(dir, label)
     abort("\n\nSCRIPT FAILURE!:\nNo #{label} .mrc files found in #{dir}.\n\n")
   end
 
-    infiles.each do |file|
-      rec_increment = 0
+  infiles.each do |file|
+    rec_increment = 0
     puts "  - #{file}"
-      reader = MARC::Reader.new(file)
-      reader.each_with_offset_caching do |rec|
+    reader = MARC::Reader.new(file)
+    reader.each_with_offset_caching do |rec|
       begin
-                  id = rec['001'].value.dup
-                rescue NoMethodError => e
-                  abort("\n\nSCRIPT FAILURE!\n#{label.capitalize} record(s) are missing 001 values, so I can't do any reliable comparisons with them.\n\n")
-                end
-        case label
-        when 'existing'
+        id = rec['001'].value.dup
+      rescue NoMethodError => e
+        abort("\n\nSCRIPT FAILURE!\n#{label.capitalize} record(s) are missing 001 values, so I can't do any reliable comparisons with them.\n\n")
+      end
+      case label
+      when 'existing'
         ri = MarcWrangler::ExistingRecordInfo.new(id)
-        when 'incoming'
+      when 'incoming'
         ri = MarcWrangler::IncomingRecordInfo.new(id)
-        else
-          abort("\n\nUnknown record set type (neither incoming nor existing).\n\n")
-        end
+      else
+        abort("\n\nUnknown record set type (neither incoming nor existing).\n\n")
+      end
 
-        ri.reader = reader
-        ri.reader_index = rec_increment
+      ri.reader = reader
+      ri.reader_index = rec_increment
+
+      rec.fields.delete(rec['005'])
+      ri.marc_hash = rec.to_s.hash
 
       ri.mergeids = rec.m019_vals
       ri.sourcefile = file
 
-        recinfos << ri
+      recinfos << ri
       rec_increment += 1
-      end
     end
-    puts "There are #{recinfos.size} #{label} records."
-  recinfos
   end
+  puts "There are #{recinfos.size} #{label} records."
+  recinfos
+end
 
 def make_rec_info_hash(ri_array)
   thehash = {}
@@ -455,72 +456,6 @@ def clean_id(rec, idfields, spec)
     end
   }
   return rec
-end
-
-def get_fields_by_spec(rec, spec)
-  fields = []
-  spec.each { |fspec|
-    tmpfields = rec.find_all { |flds| flds.tag =~ /#{fspec['tag']}/ }
-    if fspec.has_key?('i1')
-      tmpfields.select! { |f| f.indicator1 =~ /#{fspec['i1']}/ }
-    end
-    if fspec.has_key?('i2')
-      tmpfields.select! { |f| f.indicator2 =~ /#{fspec['i2']}/ }
-    end
-    if fspec.has_key?('field has')
-      tmpfields.select! { |f| f.to_s =~ /#{fspec['field has']}/i }
-    end
-    if fspec.has_key?('field does not have')
-      tmpfields.reject! { |f| f.to_s =~ /#{fspec['field does not have']}/i }
-    end
-    tmpfields.each { |f| fields << f }
-  }
-  #  puts fields
-  return fields
-end
-
-def get_fields_for_comparison(rec, config)
-  omitfspec = config['omit from comparison fields']
-  omitsfspec = config['omit from comparison subfields']
-  to_omit = get_fields_by_spec(rec, omitfspec)
-  to_compare = rec.reject { |f| to_omit.include?(f) }
-  tags_w_sf_omissions = omitsfspec.keys if omitsfspec
-
-  compare = []
-
-  to_compare.each { |cf|
-    if cf.class.name == 'MARC::ControlField'
-      compare << cf
-    else
-      if omitsfspec.is_a?(NilClass)
-        compare << cf
-      else
-        if tags_w_sf_omissions.include?(cf.tag)
-          sfs_to_omit = omitsfspec[cf.tag].chars
-          newfield = MARC::DataField.new(cf.tag, cf.indicator1, cf.indicator2)
-          cf.subfields.each { |sf|
-            unless sfs_to_omit.include?(sf.code)
-              newsf = MARC::Subfield.new(sf.code, sf.value)
-              newfield.append(newsf)
-            end
-          }
-          compare << newfield
-        else
-          compare << cf
-        end
-      end
-    end
-  }
-
-  compare_strings = []
-  compare.each { |f|
-    fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
-    fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
-    fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
-    compare_strings << fs
-  }
-  compare_strings.sort!
-  return compare_strings.uniq
 end
 
 class MarcEdit
@@ -724,60 +659,34 @@ when false
   check_for_multiple_overlays(rec_info_sets)
 end
 
-# process each incoming record
-#Dir.glob("#{in_dir}/*.mrc").each do |in_file|
-#  MARC::Reader.new(in_file).each do |rec|
-#    if cleaner
-#      id_val = cleaner.clean(rec['001'].value.dup)
-#    else
-#      id_val = rec['001'].value.dup
-#    end
-#    ri = in_info[id_val]
+MarcWrangler::ComparableField.spec = thisconfig
 
 in_info.each_value do |ri|
-  rec = ri.reader[ri.reader_index]
-
   if thisconfig['log process']
     processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'begin processing MARC record']
   end
 
-
   if thisconfig['use existing record set']
-    if ri.ovdata.size > 0
-      ex_ri = ri.ovdata[0]
-      exrec = ex_ri.reader[ex_ri.reader_index]
-      #reader = MARC::Reader.new(ex_ri.lookupfile)
-      #exrec = reader.first
-    end
+    ex_ri = ri.ovdata.first if ri.ovdata.any?
   end
 
   if thisconfig['set record status by file diff']
-    if ri.ovdata.size > 0
-
-      compnew = get_fields_for_comparison(rec, thisconfig)
-      if thisconfig['log process']
-        processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'got fields for comparison from incoming record']
-      end
-
-      #puts "NEW"
-      #compnew.each { |s| puts s }
-      compold = get_fields_for_comparison(exrec, thisconfig)
-      if thisconfig['log process']
-        processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'get fields for comparison from existing record']
-      end
-      #puts "OLD"
-      #compold.each { |s| puts s }
-      changed_fields = ( compnew - compold ) + ( compold - compnew )
-
-
-      if changed_fields.size > 0
-        ri.diff_status = 'CHANGE'
+    ri.diff_status =
+      if ri.ovdata.any?
+        if omit_005 && ri.marc_hash == ex_ri.marc_hash
+          'STATIC'
+        else
+          rec = ri.marc
+          rc = RecordComparer.new(ri, ex_ri, thisconfig)
+          if rc.changed?
+            'CHANGE'
+          else
+            'STATIC'
+          end
+        end
       else
-        ri.diff_status = 'STATIC'
+        'NEW'
       end
-    else
-      ri.diff_status = 'NEW'
-    end
   end
 
   if ri.overlay_type.include?('merge id') && thisconfig['overlay merged records']
@@ -790,30 +699,14 @@ in_info.each_value do |ri|
     end
   end
 
+  rec ||= ri.marc
+
   if thisconfig['flag AC recs with changed headings']
-    if ri.ovdata.size > 0
+    if ri.ovdata.any?
       if thisconfig['log process']
         processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'flagging AC status']
       end
-      ac_new = []
-      get_fields_by_spec(rec, ac_fields).each { |f|
-        fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
-        fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
-        fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
-        ac_new << fs
-      }
-      ac_old = []
-      get_fields_by_spec(exrec, ac_fields).each { |f|
-        fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
-        fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
-        fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
-        ac_old << fs
-      }
-
-      changed_headings = (ac_new - ac_old) + (ac_old - ac_new)
-      if changed_headings.size > 0
-        ri.ac_changed = true
-      end
+      ri.ac_changed = rc.ac_change?
     end
   end
 

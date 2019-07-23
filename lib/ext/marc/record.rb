@@ -2,12 +2,6 @@ require 'marc'
 require 'json'
 
 module MARC
-
-  class Writer
-    attr_reader :fh
-  end
-
-
   class Record
     include Comparable
 
@@ -100,15 +94,6 @@ module MARC
       return self
     end
 
-    def delete_ebk_655s
-      self.each_by_tag("655") do |f|
-        if f.to_s =~ /\$a ?(Electronic book|E-?book)/i
-          self.fields.delete(f)
-        end
-      end
-      return self
-    end
-
     def m019_vals
       m019_vals = []
       fields('019').each do |f|
@@ -143,6 +128,20 @@ module MARC
       else
         return 'yes'
       end
+    end
+
+    # None of these private methods seem to be used. Marking them private to
+    # ensure they are not being used in the main script. Not removing them
+    # entirely in case they were intended for something.
+    private
+
+    def delete_ebk_655s
+      self.each_by_tag("655") do |f|
+        if f.to_s =~ /\$a ?(Electronic book|E-?book)/i
+          self.fields.delete(f)
+        end
+      end
+      return self
     end
 
     def array_of_values(tag, sf)
