@@ -624,22 +624,25 @@ in_info.each_value do |ri|
   end
 
   if thisconfig['set record status by file diff']
-    ri.diff_status =
-      if ri.ovdata.any?
-        if omit_005 && ri.marc_hash == ex_ri.marc_hash
-          'STATIC'
-        else
-          rec = ri.marc
-          rc = RecordComparer.new(ri, ex_ri, thisconfig)
-          if rc.changed?
-            'CHANGE'
-          else
-            'STATIC'
-          end
-        end
+    if ri.ovdata.any?
+      if omit_005 && ri.marc_hash == ex_ri.marc_hash
+        ri.diff_status = 'STATIC'
       else
-        'NEW'
+        rec = ri.marc
+        rc = RecordComparer.new(ri, ex_ri, thisconfig)
+        if rc.changed?
+          ri.diff_status = 'CHANGE'
+        else
+          ri.diff_status = 'STATIC'
+        end
+        if thisconfig['log process']
+          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'got fields for comparison from incoming record']
+          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'got fields for comparison from existing record']
+        end
       end
+    else
+      ri.diff_status = 'NEW'
+    end
   end
 
   if ri.overlay_type.include?('merge id') && thisconfig['overlay merged records']
@@ -889,7 +892,7 @@ end
 
 puts "\n\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\nAll important work is done! It's safe to use the files in the output directory now.\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n"
 puts "It may take me a while to finish cleaning up my working files, though..."
-#ObjectSpace.each_object(IO) {|x| x.close }
+ObjectSpace.each_object(IO) {|x| x.close }
 
 #FileUtils.remove_dir('working', force = true)
 FileUtils.rm Dir.glob('data/working/*.mrc'), :force => true
