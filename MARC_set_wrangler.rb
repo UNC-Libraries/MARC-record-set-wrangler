@@ -8,6 +8,7 @@ require 'marc'
 require 'lib/marc_wrangler'
 require 'lib/marc_wrangler/marc_record'
 require 'lib/marc_wrangler/process_holdings'
+require 'marc_wrangler/record_info.rb'
 require 'highline/import'
 require 'pp'
 require 'fileutils'
@@ -353,43 +354,44 @@ end
 def get_rec_info(dir, label)
   puts "\n\nGathering record info from #{dir} files:"
   recinfos = []
-  rec_increment = 1
   infiles = Dir.glob("#{dir}/*.mrc")
-  if infiles.size > 0
-    infiles.each { |file|
-      sourcefile = "#{file}"
-      puts "  - #{sourcefile}"
-      MARC::Reader.new(file).each { |rec|
-        recid = begin
+
+  if infiles.empty?
+    abort("\n\nSCRIPT FAILURE!:\nNo #{label} .mrc files found in #{dir}.\n\n")
+  end
+
+    infiles.each do |file|
+      rec_increment = 0
+    puts "  - #{file}"
+      reader = MARC::Reader.new(file)
+      reader.each_with_offset_caching do |rec|
+      begin
                   id = rec['001'].value.dup
                 rescue NoMethodError => e
                   abort("\n\nSCRIPT FAILURE!\n#{label.capitalize} record(s) are missing 001 values, so I can't do any reliable comparisons with them.\n\n")
                 end
         case label
         when 'existing'
-          ri = MARC::ExistingRecordInfo.new(id)
-          mypath = "data/working/#{rec_increment}.mrc"
-          writer = MARC::Writer.new(mypath)
-          writer.write(rec)
-          writer.close
-          ri.lookupfile = mypath
-          rec_increment += 1
+        ri = MarcWrangler::ExistingRecordInfo.new(id)
         when 'incoming'
-          ri = MARC::IncomingRecordInfo.new(id)
+        ri = MarcWrangler::IncomingRecordInfo.new(id)
         else
           abort("\n\nUnknown record set type (neither incoming nor existing).\n\n")
         end
-        ri.mergeids = rec.get_019_vals
-        ri.sourcefile = sourcefile
+
+        ri.reader = reader
+        ri.reader_index = rec_increment
+
+      ri.mergeids = rec.m019_vals
+      ri.sourcefile = file
+
         recinfos << ri
-      }
-    }
+      rec_increment += 1
+      end
+    end
     puts "There are #{recinfos.size} #{label} records."
-    return recinfos
-  else
-    abort("\n\nSCRIPT FAILURE!:\nNo #{label} .mrc files found in #{dir}.\n\n")
+  recinfos
   end
-end
 
 def make_rec_info_hash(ri_array)
   thehash = {}
@@ -613,9 +615,9 @@ class MergeIdManipulator
   end
 
   def fix
-    matching_val = @rec.get_019_vals.select { |v| v == @ex_rec_id }
+    matching_val = @rec.m019_vals.select { |v| v == @ex_rec_id }
     matching_val = matching_val[0]
-    nonmatching_val = @rec.get_019_vals.select { |v| v != @ex_rec_id }
+    nonmatching_val = @rec.m019_vals.select { |v| v != @ex_rec_id }
     @rec.delete_fields_by_tag('019')
     newfield = (MARC::DataField.new('019', ' ', ' ', ['a', matching_val]))
     if nonmatching_val.size > 0
@@ -723,225 +725,229 @@ when false
 end
 
 # process each incoming record
-Dir.glob("#{in_dir}/*.mrc").each do |in_file|
-  MARC::Reader.new(in_file).each do |rec|
-    if cleaner
-      id_val = cleaner.clean(rec['001'].value.dup)
-    else
-      id_val = rec['001'].value.dup
-    end
-    ri = in_info[id_val]
+#Dir.glob("#{in_dir}/*.mrc").each do |in_file|
+#  MARC::Reader.new(in_file).each do |rec|
+#    if cleaner
+#      id_val = cleaner.clean(rec['001'].value.dup)
+#    else
+#      id_val = rec['001'].value.dup
+#    end
+#    ri = in_info[id_val]
 
-    if thisconfig['log process']
-      processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'begin processing MARC record']
-    end
+in_info.each_value do |ri|
+  rec = ri.reader[ri.reader_index]
 
-
-    if thisconfig['use existing record set']
-      if ri.ovdata.size > 0
-        ex_ri = ri.ovdata[0]
-        reader = MARC::Reader.new(ex_ri.lookupfile)
-        exrec = reader.first
-      end
-    end
-
-    if thisconfig['set record status by file diff']
-      if ri.ovdata.size > 0
-
-        compnew = get_fields_for_comparison(rec, thisconfig)
-        if thisconfig['log process']
-          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'got fields for comparison from incoming record']
-        end
-            
-        #puts "NEW"
-        #compnew.each { |s| puts s }
-        compold = get_fields_for_comparison(exrec, thisconfig)
-        if thisconfig['log process']
-          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'get fields for comparison from existing record']
-        end
-        #puts "OLD"
-        #compold.each { |s| puts s }
-        changed_fields = ( compnew - compold ) + ( compold - compnew )
+  if thisconfig['log process']
+    processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'begin processing MARC record']
+  end
 
 
-        if changed_fields.size > 0
-          ri.diff_status = 'CHANGE'
-        else
-          ri.diff_status = 'STATIC'
-        end
-      else
-        ri.diff_status = 'NEW'
-      end
-    end
-
-    if ri.overlay_type.include?('merge id') && thisconfig['overlay merged records']
-      ri.diff_status = 'CHANGE'
-    end
-
-    if ri.diff_status == 'STATIC'
-      if thisconfig['incoming record output files']
-        next if thisconfig['incoming record output files']['STATIC'] == 'do not output'
-      end
-    end
-
-    if thisconfig['flag AC recs with changed headings']
-      if ri.ovdata.size > 0
-        if thisconfig['log process']
-          processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'flagging AC status']
-        end
-        ac_new = []
-        get_fields_by_spec(rec, ac_fields).each { |f|
-          fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
-          fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
-          fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
-          ac_new << fs
-        }
-        ac_old = []
-        get_fields_by_spec(exrec, ac_fields).each { |f|
-          fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
-          fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
-          fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
-          ac_old << fs
-        }
-
-        changed_headings = (ac_new - ac_old) + (ac_old - ac_new)
-        if changed_headings.size > 0
-          ri.ac_changed = true
-        end
-      end
-    end
-
-    if thisconfig['warn about non-e-resource records']
-      ri.warnings << 'Not an e-resource record?' unless rec.is_e_rec? == 'yes'
-    end
-
-    if thisconfig['warn about cat lang']
-      catlangs = thisconfig['cat lang']
-      reclang = rec.cat_lang
-      if reclang == nil
-        ri.warnings << 'No 040 field, so language of cataloging cannot be checked.'
-      else
-        ri.warnings << 'Not our language of cataloging' unless catlangs.include?(reclang)
-      end
-    end
-
-    if thisconfig['elvl sets AC status']
-      elvl = rec.encoding_level
-      case ac_status.get_by_elvl(elvl)
-      when nil
-        ri.warnings << "#{elvl} is not in elvl AC map. Please add to config."
-      when 'AC'
-        ri.under_ac = true
-      when 'noAC'
-        ri.under_ac = false
-      end
-    end
-
-    # start actually editing records
-    reced = MarcEdit.new(rec)
-
-    if thisconfig['log process']
-      processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'applying edits to MARC record']
-    end
-
-    if thisconfig['process_wcm_coverage']
-      result = ProcessHoldings.process_holdings(rec)
-      rec = result[:rec] if result
-      ri.warnings << result[:msg].gsub('ERROR - ', '') if result[:msg]
-    end
-    
-    if thisconfig['overlay merged records']
-      rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
-    end
-
-    if thisconfig['clean ids']
-      rec = cleaner.clean_record(rec, idfields)
-    end
-
-    if thisconfig['use id affix']
-      rec = affix_handler.add_to_record(rec, idfields)
-    end
-
-    if thisconfig['flag rec status']
-      this_spec = thisconfig['rec status flag spec']
-      this_replace = [{'[RECORDSTATUS]'=>ri.diff_status}]
-      reced.add_field_with_parameter(this_spec, this_replace)
-    end
-
-    if thisconfig['flag overlay type']
-      if ri.overlay_type.size > 0
-        ri.overlay_type.each do |type|
-          reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
-        end
-      end
-    end
-
-    if thisconfig['check LDR/09 for in-set consistency']
-      #gather this for each record as we loop through, so we can check over the set after
-      ri.character_coding_scheme = rec.leader[9,1]
-    end
-
-    if ri.ac_changed
-      ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
-    end
-
-    case ri.under_ac
-    when true
-      if thisconfig['add AC MARC fields']
-        reced = MarcEdit.new(rec)
-        thisconfig['add AC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
-      end
-    when false
-      if thisconfig['add noAC MARC fields']
-        thisconfig['add noAC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
-      end
-    end
-
-    if thisconfig['write format flag to recs']
-      f = Format.rec_type(rec)
-      if f
-        reced.add_field_with_parameter(thisconfig['format flag MARC spec'], [{'[FORMAT]'=>f}])
-      else
-        ri.warnings << 'Unknown record format'
-      end
-    end
-
-    if thisconfig['add MARC field spec']
-      thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
-    end
-
-    if thisconfig['write warnings to recs']
-      if ri.warnings.size > 0
-        ri.warnings.each { |w|
-          reced.add_field_with_parameter(thisconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
-        }
-      end
-    end
-
-    rec = reced.sort_fields
-
-    if thisconfig['incoming record output files']
-      status = ri.diff_status
-      if writers.has_key?(writeconfig[status])
-        writers[writeconfig[status]].write(rec)
-        ri.outfile = writers[writeconfig[status]].fh.path
-      elsif writeconfig.has_key?(status)
-        writers[writeconfig[status]] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
-        writers[writeconfig[status]].write(rec)
-        ri.outfile = writers[writeconfig[status]].fh.path
-      else
-        ri.outfile = "not output"
-        next
-      end
-    else
-      out_mrc.write(rec)
-      ri.outfile = out_mrc.fh.path
-    end
-
-    if thisconfig['log warnings']
-      ri.warnings.map! { |w| [ri.sourcefile, ri.outfile, ri.id, w] }
+  if thisconfig['use existing record set']
+    if ri.ovdata.size > 0
+      ex_ri = ri.ovdata[0]
+      exrec = ex_ri.reader[ex_ri.reader_index]
+      #reader = MARC::Reader.new(ex_ri.lookupfile)
+      #exrec = reader.first
     end
   end
+
+  if thisconfig['set record status by file diff']
+    if ri.ovdata.size > 0
+
+      compnew = get_fields_for_comparison(rec, thisconfig)
+      if thisconfig['log process']
+        processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'got fields for comparison from incoming record']
+      end
+
+      #puts "NEW"
+      #compnew.each { |s| puts s }
+      compold = get_fields_for_comparison(exrec, thisconfig)
+      if thisconfig['log process']
+        processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'get fields for comparison from existing record']
+      end
+      #puts "OLD"
+      #compold.each { |s| puts s }
+      changed_fields = ( compnew - compold ) + ( compold - compnew )
+
+
+      if changed_fields.size > 0
+        ri.diff_status = 'CHANGE'
+      else
+        ri.diff_status = 'STATIC'
+      end
+    else
+      ri.diff_status = 'NEW'
+    end
+  end
+
+  if ri.overlay_type.include?('merge id') && thisconfig['overlay merged records']
+    ri.diff_status = 'CHANGE'
+  end
+
+  if ri.diff_status == 'STATIC'
+    if thisconfig['incoming record output files']
+      next if thisconfig['incoming record output files']['STATIC'] == 'do not output'
+    end
+  end
+
+  if thisconfig['flag AC recs with changed headings']
+    if ri.ovdata.size > 0
+      if thisconfig['log process']
+        processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'flagging AC status']
+      end
+      ac_new = []
+      get_fields_by_spec(rec, ac_fields).each { |f|
+        fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+        fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
+        fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
+        ac_new << fs
+      }
+      ac_old = []
+      get_fields_by_spec(exrec, ac_fields).each { |f|
+        fs = f.to_s.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+        fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
+        fs.gsub!(/\.$/, '') if config['ignore end of field periods in field comparison']
+        ac_old << fs
+      }
+
+      changed_headings = (ac_new - ac_old) + (ac_old - ac_new)
+      if changed_headings.size > 0
+        ri.ac_changed = true
+      end
+    end
+  end
+
+  if thisconfig['warn about non-e-resource records']
+    ri.warnings << 'Not an e-resource record?' unless rec.is_e_rec? == 'yes'
+  end
+
+  if thisconfig['warn about cat lang']
+    catlangs = thisconfig['cat lang']
+    reclang = rec.cat_lang
+    if reclang == nil
+      ri.warnings << 'No 040 field, so language of cataloging cannot be checked.'
+    else
+      ri.warnings << 'Not our language of cataloging' unless catlangs.include?(reclang)
+    end
+  end
+
+  if thisconfig['elvl sets AC status']
+    elvl = rec.encoding_level
+    case ac_status.get_by_elvl(elvl)
+    when nil
+      ri.warnings << "#{elvl} is not in elvl AC map. Please add to config."
+    when 'AC'
+      ri.under_ac = true
+    when 'noAC'
+      ri.under_ac = false
+    end
+  end
+
+  # start actually editing records
+  reced = MarcEdit.new(rec)
+
+  if thisconfig['log process']
+    processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'applying edits to MARC record']
+  end
+
+  if thisconfig['process_wcm_coverage']
+    result = ProcessHoldings.process_holdings(rec)
+    rec = result[:rec] if result
+    ri.warnings << result[:msg].gsub('ERROR - ', '') if result[:msg]
+  end
+
+  if thisconfig['overlay merged records']
+    rec = MergeIdManipulator.new(rec, ri).fix if ri.overlay_type.include?('merge id')
+  end
+
+  if thisconfig['clean ids']
+    rec = cleaner.clean_record(rec, idfields)
+  end
+
+  if thisconfig['use id affix']
+    rec = affix_handler.add_to_record(rec, idfields)
+  end
+
+  if thisconfig['flag rec status']
+    this_spec = thisconfig['rec status flag spec']
+    this_replace = [{'[RECORDSTATUS]'=>ri.diff_status}]
+    reced.add_field_with_parameter(this_spec, this_replace)
+  end
+
+  if thisconfig['flag overlay type']
+    if ri.overlay_type.size > 0
+      ri.overlay_type.each do |type|
+        reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
+      end
+    end
+  end
+
+  if thisconfig['check LDR/09 for in-set consistency']
+    #gather this for each record as we loop through, so we can check over the set after
+    ri.character_coding_scheme = rec.leader[9,1]
+  end
+
+  if ri.ac_changed
+    ac_changes_spec.each { |field_spec| reced.add_field(field_spec) }
+  end
+
+  case ri.under_ac
+  when true
+    if thisconfig['add AC MARC fields']
+      reced = MarcEdit.new(rec)
+      thisconfig['add AC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+    end
+  when false
+    if thisconfig['add noAC MARC fields']
+      thisconfig['add noAC MARC spec'].each { |field_spec| reced.add_field(field_spec) }
+    end
+  end
+
+  if thisconfig['write format flag to recs']
+    f = Format.rec_type(rec)
+    if f
+      reced.add_field_with_parameter(thisconfig['format flag MARC spec'], [{'[FORMAT]'=>f}])
+    else
+      ri.warnings << 'Unknown record format'
+    end
+  end
+
+  if thisconfig['add MARC field spec']
+    thisconfig['add MARC field spec'].each { |field_spec| reced.add_field(field_spec) }
+  end
+
+  if thisconfig['write warnings to recs']
+    if ri.warnings.size > 0
+      ri.warnings.each { |w|
+        reced.add_field_with_parameter(thisconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
+      }
+    end
+  end
+
+  rec = reced.sort_fields
+
+  if thisconfig['incoming record output files']
+    status = ri.diff_status
+    if writers.has_key?(writeconfig[status])
+      writers[writeconfig[status]].write(rec)
+      ri.outfile = writers[writeconfig[status]].fh.path
+    elsif writeconfig.has_key?(status)
+      writers[writeconfig[status]] = MARC::Writer.new("#{out_dir}/#{filestem}#{writeconfig[status]}.mrc")
+      writers[writeconfig[status]].write(rec)
+      ri.outfile = writers[writeconfig[status]].fh.path
+    else
+      ri.outfile = "not output"
+      next
+    end
+  else
+    out_mrc.write(rec)
+    ri.outfile = out_mrc.fh.path
+  end
+
+  if thisconfig['log warnings']
+    ri.warnings.map! { |w| [ri.sourcefile, ri.outfile, ri.id, w] }
+  end
+  #end
 end
 
 set_warnings = []
@@ -978,8 +984,9 @@ if thisconfig['produce delete file']
 
     deletes.group_by { |ri| ri.sourcefile }.each do |sourcefile, ri_set|
       ri_set.each do |ri|
-        reader = MARC::Reader.new(ri.lookupfile)
-        del_rec = reader.first
+        #reader = MARC::Reader.new(ri.lookupfile)
+        #del_rec = reader.first
+        del_rec = ri.reader[ri.reader_index]
 
         if thisconfig['clean ids']
           del_rec = cleaner.clean_record(del_rec, idfields)
@@ -1030,7 +1037,7 @@ end
 
 puts "\n\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\nAll important work is done! It's safe to use the files in the output directory now.\n -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n"
 puts "It may take me a while to finish cleaning up my working files, though..."
-ObjectSpace.each_object(IO) {|x| x.close }
+#ObjectSpace.each_object(IO) {|x| x.close }
 
 #FileUtils.remove_dir('working', force = true)
 FileUtils.rm Dir.glob('data/working/*.mrc'), :force => true
