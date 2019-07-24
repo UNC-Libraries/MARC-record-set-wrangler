@@ -380,7 +380,7 @@ def get_rec_info(dir, label)
       ri.reader = reader
       ri.reader_index = rec_increment
 
-      rec.fields.delete(rec['005'])
+      rec.fields.delete(rec['005']) if rec['005']
       ri.marc_hash = rec.to_s.hash
 
       ri.mergeids = rec.m019_vals
@@ -417,6 +417,7 @@ def make_rec_info_hash(ri_array)
   }
 
   if ids_duplicated.size > 0
+    puts thehash[ids_duplicated.first].first.class.name
     if thehash[ids_duplicated[0]][0].class.name == 'ExistingRecordInfo'
       name = 'EXISTING'
     else
@@ -839,9 +840,7 @@ if thisconfig['produce delete file']
 
     deletes.group_by { |ri| ri.sourcefile }.each do |sourcefile, ri_set|
       ri_set.each do |ri|
-        #reader = MARC::Reader.new(ri.lookupfile)
-        #del_rec = reader.first
-        del_rec = ri.reader[ri.reader_index]
+        del_rec = ri.marc
 
         if thisconfig['clean ids']
           del_rec = cleaner.clean_record(del_rec, idfields)
