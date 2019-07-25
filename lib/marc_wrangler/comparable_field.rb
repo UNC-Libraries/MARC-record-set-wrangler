@@ -6,24 +6,23 @@ module MarcWrangler
   # A spec/config needs to be assigned via ComparableField.spec = my_spec
   # so that normalization/omission options are set.
   module ComparableField
-    attr_accessor :omitted, :ac
 
     # normalized comparable string
     def norm_string
-      @norm_string ||= ComparableField.norm_string(
+      ComparableField.norm_string(
         ComparableField.omitted_subfields_string(self)
       )
     end
 
     def self.spec=(spec)
       @tags_w_sf_omissions = spec['omit from comparison subfields']
-      @spec = spec
+      @ignore_trailing_periods = spec['ignore end of field periods in field comparison']
     end
 
     def self.norm_string(str)
       fs = str.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
       fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
-      fs.gsub!(/\.$/, '') if @spec['ignore end of field periods in field comparison']
+      fs.gsub!(/\.$/, '') if @ignore_trailing_periods
       fs
     end
 

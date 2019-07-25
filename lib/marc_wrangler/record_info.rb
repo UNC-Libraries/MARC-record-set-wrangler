@@ -32,7 +32,7 @@ module MarcWrangler
     end
 
     def marc
-      @marc ||= reader[reader_index]
+      reader[reader_index]
     end
   end
 

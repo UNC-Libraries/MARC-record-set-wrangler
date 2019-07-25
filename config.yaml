@@ -369,7 +369,7 @@ collections:
   generic collection (no special collection-level processing):
     placeholder option: true
   WCM - CombinedMonthly (cross-collection):
-    id affix value: 'WCMcombined'
+    id affix value: 'Combined'
     add MARC field spec:
       - tag: '773'
         i1: '1'

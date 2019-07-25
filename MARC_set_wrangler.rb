@@ -615,7 +615,10 @@ end
 
 MarcWrangler::ComparableField.spec = thisconfig
 
-in_info.each_value do |ri|
+until in_info.empty?
+  _, ri = in_info.shift
+  rec = nil
+  ex_ri = nil
   if thisconfig['log process']
     processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'begin processing MARC record']
   end
@@ -630,7 +633,7 @@ in_info.each_value do |ri|
         ri.diff_status = 'STATIC'
       else
         rec = ri.marc
-        rc = RecordComparer.new(ri, ex_ri, thisconfig)
+        rc = RecordComparer.new(rec, ex_ri.marc, thisconfig)
         if rc.changed?
           ri.diff_status = 'CHANGE'
         else
@@ -803,7 +806,6 @@ in_info.each_value do |ri|
   if thisconfig['log warnings']
     ri.warnings.map! { |w| [ri.sourcefile, ri.outfile, ri.id, w] }
   end
-  #end
 end
 
 set_warnings = []

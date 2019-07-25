@@ -1,36 +1,17 @@
 module MarcWrangler
   class RecordComparer
-    def initialize(ri, ex_ri, spec)
-      @ri = ri
-      @ex_ri = ex_ri
+    def initialize(rec, ex_rec, spec)
       @spec = spec
-      @ri_fields = ri.marc.fields
-      @ex_ri_fields = ex_ri.marc.fields
+      @ri_fields = rec.fields
+      @ex_ri_fields = ex_rec.fields
 
-      flag_omitted_fields
-      return unless changed? || @spec['incoming record output files']['STATIC'] != 'do not output'
+      @changed = detect_change(comparable_in_fields, comparable_ex_fields)
 
-      flag_ac_fields if spec['flag AC recs with changed headings']
-    end
+      output_static = @spec['incoming record output files'] &&
+                      @spec['incoming record output files']['STATIC'] != 'do not output'
+      return unless @changed || output_static
 
-    def flag_omitted_fields
-      omitted_fields_spec = @spec['omit from comparison fields']
-      self.class.flag_omitted_fields(@ri_fields, omitted_fields_spec)
-      self.class.flag_omitted_fields(@ex_ri_fields, omitted_fields_spec)
-    end
-
-    def self.flag_omitted_fields(fields, spec)
-      Config.get_fields_by_spec(fields, spec).each { |f| f.omitted = true }
-    end
-
-    def flag_ac_fields
-      ac_fields_spec = @spec['fields under AC']
-      self.class.flag_ac_fields(@ri_fields, ac_fields_spec)
-      self.class.flag_ac_fields(@ex_ri_fields, ac_fields_spec)
-    end
-
-    def self.flag_ac_fields(fields, spec)
-      Config.get_fields_by_spec(fields, spec).each { |f| f.ac = true }
+      @ac_change = detect_ac_change(ac_in_fields, ac_ex_fields)
     end
 
     def static?
@@ -38,54 +19,51 @@ module MarcWrangler
     end
 
     def changed?
-      @changed ||= detect_change
+      @changed
     end
 
-    def detect_change
-      return true unless comparable_in_fields.length == comparable_ex_fields.length
-      @comparable_in_fields.each_with_index do |f, i|
-        return true unless f.norm_string == @comparable_ex_fields[i].norm_string
+    def detect_change(in_fields, ex_fields)
+      return true unless in_fields.length == ex_fields.length
+      in_fields.each_with_index do |f, i|
+        return true unless f.norm_string == ex_fields[i].norm_string
       end
-      nil
+      false
     end
 
     def ac_change?
-      @ac_change ||= detect_ac_change
+      @ac_change
     end
 
-    def detect_ac_change
-      return true unless ac_in_fields.length == ac_ex_fields.length
-      @ac_in_fields.each_with_index do |f, i|
-        return true unless f.norm_string == @ac_ex_fields[i].norm_string
+    def detect_ac_change(in_fields, ex_fields)
+      return true unless in_fields.length == ex_fields.length
+      in_fields.each_with_index do |f, i|
+        return true unless f.norm_string == ex_fields[i].norm_string
       end
-      nil
+
+      false
     end
 
     def comparable_in_fields
-      @comparable_in_fields ||=
-        @ri_fields.reject { |f| f.omitted }.
-        sort_by { |f| f.norm_string }.
+      fields = @ri_fields - Config.get_fields_by_spec(@ri_fields, @spec['omit from comparison fields'])
+      fields.sort_by { |f| f.norm_string }.
         uniq { |f| f.norm_string }
     end
 
     def comparable_ex_fields
-      @comparable_ex_fields ||=
-        @ex_ri_fields.reject { |f| f.omitted }.
-        sort_by { |f| f.norm_string }.
+      fields = @ex_ri_fields - Config.get_fields_by_spec(@ex_ri_fields, @spec['omit from comparison fields'])
+      fields.sort_by { |f| f.norm_string }.
         uniq { |f| f.norm_string }
     end
 
     def ac_in_fields
-      @ac_in_fields ||=
-        @ri_fields.select { |f| f.ac }.
-        sort_by { |f| f.norm_string }.
+      fields = Config.get_fields_by_spec(@ri_fields, @spec['fields under AC'])
+      fields.sort_by { |f| f.norm_string }.
         uniq { |f| f.norm_string }
     end
 
     def ac_ex_fields
-      @ac_ex_fields ||= @ex_ri_fields.
-        select { |f| f.ac }.
-        sort_by { |f| f.norm_string }.
+      fields = Config.get_fields_by_spec(@ex_ri_fields, @spec['fields under AC'])
+      fields.sort_by { |f| f.norm_string }.
         uniq { |f| f.norm_string }
     end
   end
