@@ -417,8 +417,7 @@ def make_rec_info_hash(ri_array)
   }
 
   if ids_duplicated.size > 0
-    puts thehash[ids_duplicated.first].first.class.name
-    if thehash[ids_duplicated[0]][0].class.name == 'ExistingRecordInfo'
+    if thehash[ids_duplicated.first].first.is_a? MarcWrangler::ExistingRecordInfo
       name = 'EXISTING'
     else
       name = 'INCOMING'
