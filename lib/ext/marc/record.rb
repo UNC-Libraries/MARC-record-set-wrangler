@@ -2,12 +2,6 @@ require 'marc'
 require 'json'
 
 module MARC
-
-  class Writer
-    attr_reader :fh
-  end
-
-
   class Record
     include Comparable
 
@@ -100,26 +94,15 @@ module MARC
       return self
     end
 
-    def delete_ebk_655s
-      self.each_by_tag("655") do |f|
-        if f.to_s =~ /\$a ?(Electronic book|E-?book)/i
-          self.fields.delete(f)
-        end
+    def m019_vals
+      m019_vals = []
+      fields('019').each do |f|
+        f.subfields.each { |sf| m019_vals << sf.value }
       end
-      return self
+
+      m019_vals
     end
-    
-    def get_019_vals
-      vals = []
-      the019s = self.find_all { |f| f.tag == '019' }
-      if the019s.size > 0
-        the019s.each do |f|
-          f.subfields.each { |sf| vals << sf.value }
-        end
-      end
-      return vals
-    end
-    
+
     def is_e_rec?
       e_ct = 0
       the007s = self.find_all {|f| f.tag == '007'}
@@ -139,14 +122,28 @@ module MARC
       end
 
       e_ct += 1 if self['008'].value[formbyte] =~ /[os]/
-      
+
       if e_ct == 0
         return 'no'
       else
         return 'yes'
       end
     end
-    
+
+    # None of these private methods seem to be used. Marking them private to
+    # ensure they are not being used in the main script. Not removing them
+    # entirely in case they were intended for something.
+    private
+
+    def delete_ebk_655s
+      self.each_by_tag("655") do |f|
+        if f.to_s =~ /\$a ?(Electronic book|E-?book)/i
+          self.fields.delete(f)
+        end
+      end
+      return self
+    end
+
     def array_of_values(tag, sf)
       fs = self.fields(filter = tag)
       ss = sf.split(//)
@@ -200,47 +197,4 @@ module MARC
     end #def count_uncontrolled_shs
 
   end #class Record
-
-  # RecordInfo holds basic data about MARC records needed for matching ids and
-#  other processing, as well as efficiently retrieving the full MARC record
-#  from its file for processing
-#  :id = String 001 value
-#  :mergeids = Array of 019$a values
-#  :sourcefile = String the path to the .mrc file the record is in
-#  :warnings = Array warning messages associated with record
-#  :overlay_type = Array of elements which may be either 'main id' or 'merge id'
-class RecordInfo
-  attr_accessor :id
-  attr_accessor :mergeids
-  attr_accessor :sourcefile
-  attr_accessor :lookupfile
-  attr_accessor :outfile
-  attr_accessor :warnings
-  attr_accessor :ovdata
-  attr_accessor :overlay_type
-  attr_accessor :under_ac
-  attr_accessor :diff_status
-  attr_accessor :ac_changed
-  attr_accessor :character_coding_scheme
-
-  def initialize(id)
-    @id = id
-    @warnings = []
-    @ovdata = []
-    @overlay_type = []
-  end  
-end
-
-# :will_overlay = ExistingRecordInfo object
-class IncomingRecordInfo < RecordInfo
-  alias :will_overlay :ovdata
-  alias :will_overlay= :ovdata=
-end
-
-# :will_be_overlaid_by = IncomingRecordInfo object
-class ExistingRecordInfo < RecordInfo
-  alias :will_be_overlaid_by :ovdata
-  alias :will_be_overlaid_by= :ovdata=
-end
-
 end #module MARC
