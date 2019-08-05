@@ -119,10 +119,10 @@ class Affix
             clean_sfs = field.subfields.select { |sf| e.subfields.include?(sf.code) }
             clean_sfs.each do |sf|
               sf.value = add_to_value(sf.value, "#{@affix}#{add_to_affix}")
+            end
           end
         end
       end
-    end
     end
     rec
   end
@@ -281,7 +281,7 @@ if thisconfig['use id affix']
       abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify 'id affix value'\n\n")
     end
     if thisconfig['id affix value']
-    puts "\n\nThe #{thisconfig['affix type']} #{thisconfig['id affix value']} will be added to #{idfields.join(', ')}."
+      puts "\n\nThe #{thisconfig['affix type']} #{thisconfig['id affix value']} will be added to #{idfields.join(', ')}."
     end
     affix_handler = Affix.new(thisconfig['id affix value'], thisconfig['affix type'])
   else
@@ -435,9 +435,9 @@ def make_rec_info_hash(ri_array)
 
   name = if thehash[ids_duplicated.first].is_a? MarcWrangler::ExistingRecordInfo
            'EXISTING'
-    else
+         else
            'INCOMING'
-    end
+         end
   abort(
     <<~EOL
       \n\nSCRIPT FAILURE!
@@ -465,33 +465,31 @@ def subcollection(rec, subcollections, fspec)
 end
 
 def clean_id(rec, idfields, spec)
-  idfields.each { |fspec|
+  idfields.each do |fspec|
     ftag = fspec[0,3]
     sfd = fspec[3] if fspec.size > 3
     recfields = rec.find_all { |fld| fld.tag == ftag }
-    if recfields.size > 0
-      recfields.each { |fld|
-        fclass = fld.class.name
-        if fclass == 'MARC::ControlField'
-          id = fld.value
-          spec.each { |fr|
-            id.gsub!(/#{fr['find']}/, fr['replace'])
-          }
-        elsif fclass == 'MARC::DataField'
-          fld.subfields.each { |sf|
-            if sf.code == sfd
-              id = sf.value
-              spec.each { |fr|
-                id.gsub!(/#{fr['find']}/, fr['replace'])
-              }
-            end
-          }
-        else
+
+    recfields.each do |fld|
+      if fld.is_a? MARC::ControlField
+        id = fld.value
+        spec.each do |fr|
+          id.gsub!(/#{fr['find']}/, fr['replace'])
         end
-      }
+      else
+        fld.subfields.each do |sf|
+          next unless sf.code == sfd
+
+          id = sf.value
+          spec.each do |fr|
+            id.gsub!(/#{fr['find']}/, fr['replace'])
+          end
+        end
+      end
     end
-  }
-  return rec
+  end
+
+  rec
 end
 
 def check_for_multiple_overlays(sets)
@@ -568,9 +566,9 @@ end
 # Do the actual things...
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 if thisconfig['log process']
-      processlogpath = "#{out_dir}/#{filestem}_process_log.csv"
-      processlog = CSV.open(processlogpath, "w")
-      processlog << ['timestamp', 'source file', 'rec id', 'message']
+  processlogpath = "#{out_dir}/#{filestem}_process_log.csv"
+  processlog = CSV.open(processlogpath, "w")
+  processlog << ['timestamp', 'source file', 'rec id', 'message']
 end
 
 # Pull in our incoming and, if relevant, previously loaded MARC records
@@ -590,19 +588,15 @@ end
 if thisconfig['clean ids']
   # clean the script's internally used ids before working with them
   puts "\n\nCleaning IDs in record info..."
-  rec_info_sets.each { |set|
-    set.each { |rec_info|
+  rec_info_sets.each do |set|
+    set.each do |rec_info|
       if thisconfig['log process']
         processlog << [DateTime.now.to_s, rec_info.sourcefile, rec_info.id, 'cleaning id']
       end
       rec_info.id = cleaner.clean(rec_info.id)
-      if rec_info.mergeids.size > 0
-        rec_info.mergeids.each { |mid|
-          mid = cleaner.clean(mid)
-        }
-      end
-    }
-  }
+      rec_info.mergeids.each { |mid| mid = cleaner.clean(mid) }
+    end
+  end
 end
 
 # get record info hashes, indexed by 001 value, to work with
@@ -624,22 +618,20 @@ end
 if thisconfig['use existing record set']
   # identify main id overlays
   puts "\n\nChecking for overlays on main ID..."
-  in_info.each_pair { |id, in_ri|
+  in_info.each_pair do |id, in_ri|
     set_ovdata(id, in_ri, ex_info, 'main id')
-  }
+  end
   ov_main = in_rec_info.find_all { |ri| ri.overlay_type.include?('main id') }
   print " found #{ov_main.size}"
 
   if thisconfig['overlay merged records']
     # identify merge id overlays
     puts "\n\nChecking for overlays on merge ID..."
-    in_info.each_pair { |id, in_ri|
-      if in_ri.mergeids.size > 0
-        in_ri.mergeids.each { |mid|
-          set_ovdata(mid, in_ri, ex_info, 'merge id')
-        }
+    in_info.each_pair do |_, in_ri|
+      in_ri.mergeids.each do |mid|
+        set_ovdata(mid, in_ri, ex_info, 'merge id')
       end
-    }
+    end
     ov_merge = in_rec_info.find_all { |ri| ri.overlay_type.include?('merge id') }
     print " found #{ov_merge.size}"
   end
@@ -768,10 +760,8 @@ until in_info.empty?
   end
 
   if thisconfig['flag overlay type']
-    if ri.overlay_type.size > 0
-      ri.overlay_type.each do |type|
-        reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
-      end
+    ri.overlay_type.each do |type|
+      reced.add_field_with_parameter(thisconfig['overlay type flag spec'], [{'[OVTYPE]'=>type}])
     end
   end
 
@@ -827,10 +817,8 @@ until in_info.empty?
   end
 
   if thisconfig['write warnings to recs']
-    if ri.warnings.size > 0
-      ri.warnings.each { |w|
-        reced.add_field_with_parameter(thisconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
-      }
+    ri.warnings.each do |w|
+      reced.add_field_with_parameter(thisconfig['warning flag spec'], [{'[WARNINGTEXT]'=>w}])
     end
   end
 
@@ -862,12 +850,12 @@ end
 set_warnings = []
 
 if thisconfig['report record status counts on screen']
-    puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-    puts "RESULTS"
+  puts "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  puts "RESULTS"
 
-    in_rec_info.group_by { |ri| ri.diff_status }.each_pair do |k, v|
-      puts "#{v.size} #{k} record(s)"
-    end
+  in_rec_info.group_by { |ri| ri.diff_status }.each_pair do |k, v|
+    puts "#{v.size} #{k} record(s)"
+  end
 end
 
 if thisconfig['check LDR/09 for in-set consistency']
