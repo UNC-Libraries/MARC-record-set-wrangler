@@ -369,14 +369,13 @@ collections:
   generic collection (no special collection-level processing):
     placeholder option: true
   WCM - CombinedMonthly (cross-collection):
-    id affix value: 'Combined'
     add MARC field spec:
       - tag: '773'
         i1: '1'
         i2: ' '
         subfields:
           - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. WCMcombined'
+            value: 'OCLC WorldShare Collection Manager managed collection. wcmCombined'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -385,115 +384,93 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-    add conditional MARC field with parameters spec:
-      - find:
-          tag: '773'
-        add:
-          - tag: '590'
-            i1: '0'
-            i2: ' '
-            subfields:
-              - delimiter: 'a'
-                value: 'Content provider: provider_param.'
-        mappings:
-          - value: 'ACS symposium series.*(online collection)'
-            provider_param: 'American Chemical Society'
-          - value: 'AGU ebooks.*(online collection)'
-            provider_param: 'American Geophysical Union via Wiley Online Library'
-          - value: 'AIP Conference Proceedings.*(online collection)'
-            provider_param: 'American Institute of Physics'
-          - value: 'American Mathematical Society.*(online collection)'
-            provider_param: 'American Mathematical Society (AMS)'
-          - value: 'Business Expert Press.*(online collection)'
-            provider_param: 'IGPublish'
-          - value: 'Cambridge histories.*(online collection)'
-            provider_param: 'Cambridge University Press'
-          - value: 'Cambridge University Press.*(online collection)'
-            provider_param: 'Cambridge University Press'
-          - value: 'CIAO.*(online collection)'
-            provider_param: 'CIAO'
-          - value: 'Columbia University Press.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'Cornell University Press.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'Credo Academic.*(online collection)'
-            provider_param: 'Credo Reference'
-          - value: 'de Gruyter.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'European Mathematical Society.*(online collection)'
-            provider_param: 'European Mathematical Society'
-          - value: 'Film Platform.*(online collection)'
-            provider_param: 'Film Platform'
-          - value: 'GeoScienceWorld.*(online collection)'
-            provider_param: 'GeoScienceWorld'
-          - value: 'Harvard University Press.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'Medici.tv.*(online collection)'
-            provider_param: 'Medici.tv'
-          - value: 'Numerique premium.*(online collection)'
-            provider_param: 'Numerique Premium'
-          - value: 'Princeton University Press.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'Psychotherapy.net*(online collection)'
-            provider_param: 'Psychotheraphy.net'
-          - value: 'Royal Society of Chemistry.*(online collection)'
-            provider_param: 'Royal Society of Chemistry (Great Britain)'
-          - value: 'Rutgers University Press.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'SPIE ebooks.*(online collection)'
-            provider_param: 'SPIE'
-          - value: 'University of Hawaii.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'University of Pennsylvania.*(online collection)'
-            provider_param: 'De Gruyter'
-          - value: 'University of Toronto.*(online collection)'
-            provider_param: 'De Gruyter'
-  WCM - ACS:
-    id affix value: 'ACS'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. ACS'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: American Chemical Society.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - AIP:
-    id affix value: 'AIP'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. AIP'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: American Institute of Physics.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
+    subcollection spec:
+      set by:
+        tag: '773'
+      add:
+        - tag: '590'
+          i1: '0'
+          i2: ' '
+          subfields:
+            - delimiter: 'a'
+              value: 'Content provider: provider_param.'
+      use subcoll name as id affix: true
+      subcollections:
+        ACS:
+          value: 'ACS symposium series.*(online collection)'
+          provider_param: 'American Chemical Society'
+        AIP:
+          value: 'AIP conference proceedings.*(online collection)'
+          provider_param: 'American Institute of Physics'
+        AMS:
+          value: 'American Mathematical Society.*(online collection)'
+          provider_param: 'American Mathematical Society (AMS)'
+        BEP:
+          value: 'Business expert press.*(online collection)'
+          provider_param: 'IGPublish'
+        CHO:
+          value: 'Cambridge histories.*(online collection)'
+          provider_param: 'Cambridge University Press'
+        CIAO:
+          value: 'CIAO.*(online collection)'
+          provider_param: 'CIAO'
+        Credo:
+          value: 'Credo Academic.*(online collection)'
+          provider_param: 'Credo Reference'
+        CUP:
+          value: 'Cambridge University Press.*(online collection)'
+          provider_param: 'Cambridge University Press'
+        DGcolumbia:
+          value: 'Columbia University Press.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGcornell:
+          value: 'Cornell University Press.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGedition:
+          value: 'de Gruyter e-dition.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGger:
+          value: 'de Gruyter ebooks.*(online collection).*German studies'
+          provider_param: 'De Gruyter'
+        DGharvard:
+          value: 'Harvard University Press.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGhawaii:
+          value: 'University of Hawaii.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGpenn:
+          value: 'University of Pennsylvania.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGprinceton:
+          value: 'Princeton University Press.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGrutgers:
+          value: 'Rutgers University Press.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGtoronto:
+          value: 'University of Toronto.*(online collection)'
+          provider_param: 'De Gruyter'
+        FilmPlatform:
+          value: 'Film Platform.*(online collection)'
+          provider_param: 'Film Platform'
+        GSW:
+          value: 'GeoScienceWorld.*(online collection)'
+          provider_param: 'GeoScienceWorld'
+        Medici:
+          value: 'Medici.tv.*(online collection)'
+          provider_param: 'Medici.tv'
+        NumPrem:
+          value: 'Numerique premium.*(online collection)'
+          provider_param: 'Numerique Premium'
+        PsychNet:
+          value: 'Psychotherapy.net*(online collection)'
+          provider_param: 'Psychotheraphy.net'
+        RSC:
+          value: 'Royal Society of Chemistry.*(online collection)'
+          provider_param: 'Royal Society of Chemistry (Great Britain)'
+        SPIE:
+          value: 'SPIE ebooks.*(online collection)'
+          provider_param: 'SPIE'
   WCM - AGU:
     id affix value: 'AGU'
     add MARC field spec:
@@ -509,121 +486,6 @@ collections:
         subfields:
           - delimiter: 'a'
             value: 'Content provider: American Geophysical Union via Wiley Online Library.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - AMS:
-    id affix value: 'AMS'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. AMS'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: American Mathematical Society (AMS).'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - BEP:
-    id affix value: 'BEP'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. BEP'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: IGPublish.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - CHO:
-    id affix value: 'CHO'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. CHO'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: Cambridge University Press.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - CIAO:
-    id affix value: 'CIAO'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. CIAO'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: CIAO.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - Credo:
-    id affix value: 'Credo'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. Credo'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: Credo Reference.'
       - tag: '506'
         i1: '1'
         i2: ' '
@@ -656,331 +518,6 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-  WCM - CUP:
-    clean ids:
-      - find: 'wcmcup'
-        replace: ''
-    id affix value: 'cup'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. CUP'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: Cambridge University Press.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGcolumbia:
-    id affix value: 'DGcolumbia'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Columbia'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGcornell:
-    id affix value: 'DGcornell'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Cornell'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGedition:
-    id affix value: 'DGedition'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter e-dition'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGger:
-    id affix value: 'DGger'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter German Studies'
-      - tag: '590'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGharvard:
-    id affix value: 'DGharvard'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. DGharvard'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGhawaii:
-    id affix value: 'DGhawaii'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Hawaii'
-      - tag: '590'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGpenn:
-    id affix value: 'DGpenn'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. DGpenn'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - DGprinceton:
-    id affix value: 'DGprinceton'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. De Gruyter Princeton'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: De Gruyter.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - EMS:
-    id affix value: 'EMS'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. EMS'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: European Mathematical Society.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - FilmPlatform:
-    id affix value: 'FilmPlatform'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. FilmPlatform'
-      - tag: '590'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Provider: Film Platform.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - GSW:
-    id affix value: 'GSW'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. GSW'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: GeoScienceWorld.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - Medici.tv:
-    id affix value: 'Medici'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. Medici'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: Medici.tv.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - NumPrem:
-    id affix value: 'NumPrem'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. Numerique Premium'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: Numerique Premium.'
   WCM - PsychNet:
     id affix value: 'PsychNet'
     add MARC field spec:
@@ -1004,52 +541,6 @@ collections:
         subfields:
           - delimiter: 'a'
             value: 'Content provider: Psychotheraphy.net.'
-  WCM - RSC:
-    id affix value: 'RSC'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. RSC'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: Royal Society of Chemistry (Great Britain).'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
-  WCM - SPIE:
-    id affix value: 'SPIE'
-    add MARC field spec:
-      - tag: '773'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 't'
-            value: 'OCLC WorldShare Collection Manager managed collection. SPIE'
-      - tag: '590'
-        i1: '0'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Content provider: SPIE.'
-      - tag: '506'
-        i1: '1'
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: 'Access limited to UNC Chapel Hill-authenticated users.'
-          - delimiter: 'f'
-            value: 'Unlimited simultaneous users'
   WCM - SPRnew:
     id affix value: 'SPRnew'
     add MARC field spec:

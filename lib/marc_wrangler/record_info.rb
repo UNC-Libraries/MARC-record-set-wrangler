@@ -23,6 +23,7 @@ module MarcWrangler
     attr_accessor :reader
     attr_accessor :reader_index
     attr_accessor :marc_hash
+    attr_accessor :subcollection
 
     def initialize(id)
       @id = id

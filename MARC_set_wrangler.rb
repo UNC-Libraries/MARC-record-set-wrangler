@@ -3,6 +3,7 @@
 $LOAD_PATH << '.'
 $LOAD_PATH.unshift File.expand_path('lib', __dir__)
 require 'csv'
+require 'set'
 require 'yaml'
 require 'marc'
 require 'lib/marc_wrangler'
@@ -94,29 +95,34 @@ class Affix
     end
   end
 
-  def add_to_value(value)
+  def add_to_value(value, affix)
     case @type
     when 'prefix'
-      @affix + value
+      affix + value
     when 'suffix'
-      value + @affix
+      value + affix
     end
   end
 
-  def add_to_record(rec, id_elements)
+  # Passing an add_to_affix value allows for custom (e.g. per record or
+  # subcollection) data to be appended to the global affix. (Note that
+  # regardlessthe of whether the affix is a prefix or suffix,
+  # the add_to_affix value, if any, is always appended to the affix.
+  def add_to_record(rec, id_elements, add_to_affix: nil)
     id_elements.each do |ide|
       e = SpecifiedMarcElement.new(ide)
       if rec.tags.include?(e.tag)
         rec.find_all { |field| field.tag == e.tag }.each do |field|
-          case field.class.name
-          when 'MARC::ControlField'
-            field.value = add_to_value(field.value)
-          when 'MARC::DataField'
+          if field.is_a? MARC::ControlField
+            field.value = add_to_value(field.value, "#{@affix}#{add_to_affix}")
+          else
             clean_sfs = field.subfields.select { |sf| e.subfields.include?(sf.code) }
-            clean_sfs.each { |sf| sf.value = add_to_value(sf.value) }
+            clean_sfs.each do |sf|
+              sf.value = add_to_value(sf.value, "#{@affix}#{add_to_affix}")
           end
         end
       end
+    end
     end
     rec
   end
@@ -252,16 +258,31 @@ if thisconfig['flag AC recs with changed headings']
   end
 end
 
+subcollections =
+  if thisconfig['subcollection spec']
+    thisconfig['subcollection spec']['subcollections']
+  end
+
+if subcollections
+  if thisconfig['subcollection spec']['use subcoll name as id affix']
+    subcollections.each { |k, v| v['id affix value'] = k.to_s.freeze }
+  end
+end
+
+subcoll_fspec = thisconfig['subcollection spec']['set by'] if subcollections
+
 # Set affix if it's going to be used, otherwise it is blank string
 if thisconfig['use id affix']
   if idfields.size > 0
     unless thisconfig['affix type']
       abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify 'affix type'\n\n")
     end
-    unless thisconfig['id affix value']
+    unless thisconfig['id affix value'] || subcollections
       abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify 'id affix value'\n\n")
     end
+    if thisconfig['id affix value']
     puts "\n\nThe #{thisconfig['affix type']} #{thisconfig['id affix value']} will be added to #{idfields.join(', ')}."
+    end
     affix_handler = Affix.new(thisconfig['id affix value'], thisconfig['affix type'])
   else
     abort("\n\nSCRIPT FAILURE!\nPROBLEM IN CONFIG FILE: If 'use id affix' = true, you need to specify at least one of the following: 'main id', 'merge id'\n\n")
@@ -349,7 +370,7 @@ module Format
 end
 
 # Produces array of RecInfo structs from the MARC files in a directory
-def get_rec_info(dir, label)
+def get_rec_info(dir, label, subcollections: {}, subcoll_fspec: [])
   puts "\n\nGathering record info from #{dir} files:"
   recinfos = []
   infiles = Dir.glob("#{dir}/*.mrc")
@@ -383,6 +404,7 @@ def get_rec_info(dir, label)
       rec.fields.delete(rec['005']) if rec['005']
       ri.marc_hash = rec.to_s.hash
 
+      ri.subcollection = subcollection(rec, subcollections, subcoll_fspec)
       ri.mergeids = rec.m019_vals
       ri.sourcefile = file
 
@@ -396,36 +418,50 @@ end
 
 def make_rec_info_hash(ri_array)
   thehash = {}
-  ri_array.each { |ri|
-    if thehash.has_key?(ri.id)
-      thehash[ri.id] << ri
-    else
-      thehash[ri.id] = [ri]
-    end
-  }
+  ids_duplicated = Set.new
 
-  # Check for dupe records in set.
-  # If any are found, script stops
-  # Otherwise, all hash values are now just one RecordInfo object
-  ids_duplicated = []
-  thehash.each_pair { |id, ri_array|
-    if ri_array.size > 1
+  ri_array.each do |ri|
+    id = "#{ri.id}#{ri&.subcollection&.dig('id affix value')}"
+    if thehash.has_key?(id)
       ids_duplicated << id
     else
-      thehash[id] = ri_array[0]
+      thehash[id] = ri
     end
-  }
-
-  if ids_duplicated.size > 0
-    if thehash[ids_duplicated.first].first.is_a? MarcWrangler::ExistingRecordInfo
-      name = 'EXISTING'
-    else
-      name = 'INCOMING'
-    end
-    abort("\n\nSCRIPT FAILURE!\nDUPLICATE RECORDS IN #{name} RECORD FILE(S):\nMultiple records in your #{name.downcase} record file(s) have the same 001 value(s).\nAffected 001 values: #{ids_duplicated.join(', ')}\nPlease de-duplicate your #{name.downcase} file(s) and try the script again.\n\n")
-  else
-    return thehash
   end
+
+  # Check for dupe records in set.
+  # If any are found, script stops.
+  return thehash if ids_duplicated.empty?
+
+  name = if thehash[ids_duplicated.first].is_a? MarcWrangler::ExistingRecordInfo
+           'EXISTING'
+    else
+           'INCOMING'
+    end
+  abort(
+    <<~EOL
+      \n\nSCRIPT FAILURE!
+      DUPLICATE RECORDS IN #{name} RECORD FILE(S):
+      Multiple records in your #{name.downcase} record file(s) have the same 001 value(s).
+      Affected 001 values: #{ids_duplicated.to_a.join(', ')}
+      Please de-duplicate your #{name.downcase} file(s) and try the script again.\n\n
+    EOL
+  )
+end
+
+def subcollection(rec, subcollections, fspec)
+  return if subcollections.empty?
+
+  find_spec = fspec['find']
+
+  fields = Config.get_fields_by_spec(rec.fields, [fspec])
+  fields.each do |f|
+    subcollections.each do |_, v|
+      return v if f.to_s =~ /#{v['value']}/
+    end
+  end
+
+  nil
 end
 
 def clean_id(rec, idfields, spec)
@@ -539,11 +575,15 @@ end
 
 # Pull in our incoming and, if relevant, previously loaded MARC records
 rec_info_sets = []
-in_rec_info = get_rec_info(in_dir, 'incoming')
+in_rec_info = get_rec_info(in_dir, 'incoming',
+                           subcollections: subcollections,
+                           subcoll_fspec: subcoll_fspec)
 rec_info_sets << in_rec_info
 
 if thisconfig['use existing record set']
-  ex_rec_info = get_rec_info(ex_dir, 'existing')
+  ex_rec_info = get_rec_info(ex_dir, 'existing',
+                             subcollections: subcollections,
+                             subcoll_fspec: subcoll_fspec)
   rec_info_sets << ex_rec_info
 end
 
@@ -622,9 +662,9 @@ until in_info.empty?
     processlog << [DateTime.now.to_s, ri.sourcefile, ri.id, 'begin processing MARC record']
   end
 
-  if thisconfig['use existing record set']
-    ex_ri = ri.ovdata.first if ri.ovdata.any?
-  end
+  ex_ri = ri.ovdata.first if thisconfig['use existing record set']
+
+  subcoll = ri&.subcollection
 
   if thisconfig['set record status by file diff']
     if ri.ovdata.any?
@@ -717,7 +757,8 @@ until in_info.empty?
   end
 
   if thisconfig['use id affix']
-    rec = affix_handler.add_to_record(rec, idfields)
+    addl_affix = ri&.subcollection&.dig('id affix value')
+    rec = affix_handler.add_to_record(rec, idfields, add_to_affix: addl_affix)
   end
 
   if thisconfig['flag rec status']
@@ -771,6 +812,17 @@ until in_info.empty?
   if thisconfig['add conditional MARC field with parameters spec']
     thisconfig['add conditional MARC field with parameters spec'].each do |field_spec|
       reced.add_conditional_field_with_parameters(field_spec)
+    end
+  end
+
+  if subcollections && ri.subcollection
+    add_specs = thisconfig['subcollection spec']['add']
+    add_specs.each do |add_spec|
+      replaces = ri.subcollection.
+                 reject { |k, _| k == 'value'}.
+                 to_a.
+                 map { |k,v| {k => v} }
+      reced.add_field_with_parameter([add_spec], replaces)
     end
   end
 
@@ -848,7 +900,8 @@ if thisconfig['produce delete file']
         end
 
         if thisconfig['use id affix']
-          del_rec = affix_handler.add_to_record(del_rec, idfields)
+          addl_affix = ri&.subcollection&.dig('id affix value')
+          del_rec = affix_handler.add_to_record(del_rec, idfields, add_to_affix: addl_affix)
         end
 
         dwriter.write(del_rec)
