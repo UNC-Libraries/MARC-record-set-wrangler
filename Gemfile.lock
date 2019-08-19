@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    marc_wrangler (0.1.0)
+    marc_wrangler (0.1.2)
       enhanced_marc (~> 0.3.2)
       highline (~> 2.0.1)
       marc (~> 1.0.2)
@@ -13,9 +13,9 @@ GEM
     enhanced_marc (0.3.2)
       locale
       marc
-    highline (2.0.1)
+    highline (2.0.2)
     locale (2.1.2)
-    marc (1.0.2)
+    marc (1.0.4)
       scrub_rb (>= 1.0.1, < 2)
       unf
     rake (10.5.0)
@@ -35,7 +35,7 @@ GEM
     scrub_rb (1.0.1)
     unf (0.1.4)
       unf_ext
-    unf_ext (0.0.7.5)
+    unf_ext (0.0.7.6)
 
 PLATFORMS
   ruby
@@ -47,4 +47,4 @@ DEPENDENCIES
   rspec (~> 3.0)
 
 BUNDLED WITH
-   1.16.0
+   1.16.2
