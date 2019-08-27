@@ -450,7 +450,7 @@ def make_rec_info_hash(ri_array)
 end
 
 def subcollection(rec, subcollections, fspec)
-  return if subcollections.empty?
+  return unless subcollections&.any?
 
   find_spec = fspec['find']
 
