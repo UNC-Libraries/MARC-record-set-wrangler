@@ -20,10 +20,30 @@ module MarcWrangler
     end
 
     def self.norm_string(str)
-      fs = str.force_encoding('UTF-8').unicode_normalize.gsub(/ +$/, '')
+      # ruby-marc assumes files are utf-8 unless another encoding is specified;
+      # LDR/09 value is not considered. If the string includes invalid encoding
+      # for utf-8, try assuming marc-8 encoding. If string is not valid marc-8
+      # either, return the string for comparison unnormalized (which for diffing
+      # two strings should be better than scrubbing invalid bytes).
+      begin
+        fs = str.force_encoding('UTF-8').unicode_normalize
+      rescue ArgumentError
+        begin
+          fs = marc8_transcoder.transcode(str).unicode_normalize
+        rescue StandardError
+          return str.dup
+        end
+      end
+      fs.rstrip!
       fs.gsub!(/(.)\uFE20(.)\uFE21/, "\\1\u0361\\2") if fs =~ /\uFE20/
       fs.gsub!(/\.$/, '') if @ignore_trailing_periods
       fs
+    end
+
+    def self.marc8_transcoder
+      return @marc8_transcoder if @marc8_transcoder
+      require 'marc/marc8/to_unicode'
+      @marc8_transcoder = MARC::Marc8::ToUnicode.new
     end
 
     def self.omitted_subfields_string(field)
