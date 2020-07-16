@@ -447,6 +447,9 @@ collections:
         DGrutgers:
           value: 'Rutgers University Press.*(online collection)'
           provider_param: 'De Gruyter'
+        DGcalifornia:
+          value: 'University of California.*(online collection)'
+          provider_param: 'De Gruyter'
         DGtoronto:
           value: 'University of Toronto.*(online collection)'
           provider_param: 'De Gruyter'
