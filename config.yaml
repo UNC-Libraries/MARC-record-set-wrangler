@@ -397,7 +397,7 @@ collections:
       use subcoll name as id affix: true
       subcollections:
         ACS:
-          value: 'ACS symposium series.*(online collection)'
+          value: ' ACS .*(online collection)'
           provider_param: 'American Chemical Society'
         AIP:
           value: 'AIP conference proceedings.*(online collection)'
