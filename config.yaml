@@ -474,6 +474,51 @@ collections:
         SPIE:
           value: 'SPIE ebooks.*(online collection)'
           provider_param: 'SPIE'
+  WCM - Combined Open Access (cross-collection):
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. Open access'
+      - tag: '506'
+        i1: '0'
+        i2: ' '
+        subfields:
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
+      - tag: '915'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: '9'
+            value: 'NOTAUTHO'
+      - tag: '949'
+        i1: ' '
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: '*b3=x'
+    subcollection spec:
+      set by:
+        tag: '773'
+      add:
+        - tag: '590'
+          i1: '0'
+          i2: ' '
+          subfields:
+            - delimiter: 'a'
+              value: 'Content provider: provider_param.'
+      use subcoll name as id affix: true
+      subcollections:
+        JSTOR:
+          value: 'JSTOR .*(online collection)'
+          provider_param: 'JSTOR'
+    elvl sets AC status: false
+    add AC MARC fields: false
+    add noAC MARC fields: false
+    flag AC recs with changed headings: false
   WCM - AGU:
     id affix value: 'AGU'
     add MARC field spec:
