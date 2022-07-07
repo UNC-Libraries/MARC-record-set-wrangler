@@ -414,6 +414,9 @@ collections:
         CIAO:
           value: 'CIAO.*(online collection)'
           provider_param: 'CIAO'
+        CMP:
+          value: 'Cambridge companions.*(online collection)'
+          provider_param: 'Cambridge University Press'
         Credo:
           value: 'Credo Academic.*(online collection)'
           provider_param: 'Credo Reference'
