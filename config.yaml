@@ -470,7 +470,7 @@ collections:
           provider_param: 'Numerique Premium'
         PsychNet:
           value: 'Psychotherapy.net*(online collection)'
-          provider_param: 'Psychotheraphy.net'
+          provider_param: 'Psychotherapy.net'
         RSC:
           value: 'Royal Society of Chemistry.*(online collection)'
           provider_param: 'Royal Society of Chemistry (Great Britain)'
@@ -591,7 +591,7 @@ collections:
         i2: ' '
         subfields:
           - delimiter: 'a'
-            value: 'Content provider: Psychotheraphy.net.'
+            value: 'Content provider: Psychotherapy.net.'
   WCM - SPRnew:
     id affix value: 'SPRnew'
     add MARC field spec:
