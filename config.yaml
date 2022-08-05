@@ -477,6 +477,9 @@ collections:
         SPIE:
           value: 'SPIE ebooks.*(online collection)'
           provider_param: 'SPIE'
+        Swank:
+          value: 'Swank .*(online collection)'
+          provider_param: 'Swank'
   WCM - Combined Open Access (cross-collection):
     add MARC field spec:
       - tag: '773'
