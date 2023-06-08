@@ -400,7 +400,7 @@ collections:
           value: ' ACS .*(online collection)'
           provider_param: 'American Chemical Society'
         AIP:
-          value: 'AIP conference proceedings.*(online collection)'
+          value: 'AIP .*(online collection)'
           provider_param: 'American Institute of Physics'
         AMS:
           value: 'American Mathematical Society.*(online collection)'
