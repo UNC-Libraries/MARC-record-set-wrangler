@@ -113,7 +113,6 @@ workflows:
       #   replace: ''
     use id affix: false
     use existing record set: false
-    elvl sets AC status: false
     write format flag to recs: true
     check LDR/09 for in-set consistency: true
     write warnings to recs: true
@@ -160,7 +159,6 @@ workflows:
       NEW: '_in_new_only'
     produce delete file: true
     report delete count on screen: true
-    elvl sets AC status: false
     write format flag to recs: false
     check LDR/09 for in-set consistency: false
     write warnings to recs: false
@@ -222,10 +220,6 @@ workflows:
       NEW: '_prep_for_load'
     produce delete file: true
     report delete count on screen: true
-    elvl sets AC status: true
-    add AC MARC fields: false
-    add noAC MARC fields: true
-    flag AC recs with changed headings: true
     write format flag to recs: true
     warn about non-e-resource records: true
     warn about cat lang: true
@@ -256,10 +250,6 @@ workflows:
     set record status by file diff: false
     flag rec status: false
     produce delete file: false
-    elvl sets AC status: true
-    add AC MARC fields: false
-    add noAC MARC fields: true
-    flag AC recs with changed headings: false
 
   WCM - compare current downloadable full set against current ILS set:
     clean ids:
@@ -337,10 +327,6 @@ workflows:
       NEW: '_prep_for_load'
     produce delete file: true
     report delete count on screen: true
-    elvl sets AC status: true
-    add AC MARC fields: false
-    add noAC MARC fields: true
-    flag AC recs with changed headings: true
 
   OHO pre-edit:
     use existing record set: true
@@ -494,18 +480,6 @@ collections:
         subfields:
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
-      - tag: '915'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: '9'
-            value: 'NOTAUTHO'
-      - tag: '949'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: '*b3=x'
     subcollection spec:
       set by:
         tag: '773'
@@ -521,10 +495,6 @@ collections:
         JSTOR:
           value: 'JSTOR .*(online collection)'
           provider_param: 'JSTOR'
-    elvl sets AC status: false
-    add AC MARC fields: false
-    add noAC MARC fields: false
-    flag AC recs with changed headings: false
   WCM - AGU:
     id affix value: 'AGU'
     add MARC field spec:
@@ -755,19 +725,4 @@ collections:
         subfields:
           - delimiter: 'a'
             value: 'Provider: Wiley.'
-      - tag: '915'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: '9'
-            value: 'NOTAUTHO'
-      - tag: '949'
-        i1: ' '
-        i2: ' '
-        subfields:
-          - delimiter: 'a'
-            value: '*b3=x'
-    elvl sets AC status: false
-    add noAC MARC fields: true
-    flag AC recs with changed headings: false
 
