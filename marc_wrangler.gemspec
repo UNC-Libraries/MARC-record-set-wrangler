@@ -35,7 +35,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec", "~> 3.0"
 
   spec.add_runtime_dependency 'highline', "~> 2.0.1"
-  spec.add_runtime_dependency 'marc', "~> 1.0.2"
+  spec.add_runtime_dependency 'marc', "~> 1.1"
   spec.add_runtime_dependency 'enhanced_marc', "~> 0.3.2"
 
   # unf_ext 0.0.7.6 was released without windows binaries

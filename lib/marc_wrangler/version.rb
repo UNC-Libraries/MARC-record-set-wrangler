@@ -1,3 +1,3 @@
 module MarcWrangler
-  VERSION = '0.1.5.1'.freeze
+  VERSION = '0.1.6'.freeze
 end

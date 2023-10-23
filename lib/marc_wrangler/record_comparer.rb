@@ -7,11 +7,8 @@ module MarcWrangler
 
       @changed = detect_change(comparable_in_fields, comparable_ex_fields)
 
-      output_static = @spec['incoming record output files'] &&
-                      @spec['incoming record output files']['STATIC'] != 'do not output'
-      return unless @changed || output_static
-
-      @ac_change = detect_ac_change(ac_in_fields, ac_ex_fields)
+      @output_static = @spec['incoming record output files'] &&
+                       @spec['incoming record output files']['STATIC'] != 'do not output'
     end
 
     def static?
@@ -31,7 +28,11 @@ module MarcWrangler
     end
 
     def ac_change?
-      @ac_change
+      return @ac_change if @ac_change
+
+      return unless @changed || @output_static
+
+      @ac_change ||= detect_ac_change(ac_in_fields, ac_ex_fields)
     end
 
     def detect_ac_change(in_fields, ex_fields)
