@@ -451,6 +451,9 @@ collections:
         Medici:
           value: 'Medici.tv.*(online collection)'
           provider_param: 'Medici.tv'
+        Michigan:
+          value: 'University of Michigan.*(online collection)'
+          provider_param: 'University of Michigan'
         NumPrem:
           value: 'Numerique premium.*(online collection)'
           provider_param: 'Numerique Premium'
