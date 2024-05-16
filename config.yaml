@@ -409,14 +409,26 @@ collections:
         CUP:
           value: 'Cambridge University Press.*(online collection)'
           provider_param: 'Cambridge University Press'
+        DGbristol:
+          value: 'University of Bristol.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGchicago:
+          value: 'University of Chicago.*(online collection)'
+          provider_param: 'De Gruyter'
         DGcolumbia:
           value: 'Columbia University Press.*(online collection)'
           provider_param: 'De Gruyter'
         DGcornell:
           value: 'Cornell University Press.*(online collection)'
           provider_param: 'De Gruyter'
+        DGedinburgh:
+          value: 'Edinburgh University.*(online collection)'
+          provider_param: 'De Gruyter'
         DGedition:
           value: 'de Gruyter e-dition.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGfordham:
+          value: 'Fordham University.*(online collection)'
           provider_param: 'De Gruyter'
         DGger:
           value: 'de Gruyter ebooks.*(online collection).*German studies'
@@ -427,6 +439,9 @@ collections:
         DGhawaii:
           value: 'University of Hawaii.*(online collection)'
           provider_param: 'De Gruyter'
+        DGnyu:
+          value: 'New York University.*(online collection)'
+          provider_param: 'De Gruyter'
         DGpenn:
           value: 'University of Pennsylvania.*(online collection)'
           provider_param: 'De Gruyter'
@@ -436,11 +451,17 @@ collections:
         DGrutgers:
           value: 'Rutgers University Press.*(online collection)'
           provider_param: 'De Gruyter'
+        DGstanford:
+          value: 'Stanford University.*(online collection)'
+          provider_param: 'De Gruyter'
         DGcalifornia:
           value: 'University of California.*(online collection)'
           provider_param: 'De Gruyter'
         DGtoronto:
           value: 'University of Toronto.*(online collection)'
+          provider_param: 'De Gruyter'
+        DGyale:
+          value: 'Yale University.*(online collection)'
           provider_param: 'De Gruyter'
         FilmPlatform:
           value: 'Film Platform.*(online collection)'
