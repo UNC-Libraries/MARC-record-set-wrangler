@@ -469,6 +469,9 @@ collections:
         GSW:
           value: 'GeoScienceWorld.*(online collection)'
           provider_param: 'GeoScienceWorld'
+        LIUN:
+          value: 'Local and independent Ukrainian Newspapers.*(online collection)'
+          provider_param: 'Global Press Archives'
         Medici:
           value: 'Medici.tv.*(online collection)'
           provider_param: 'Medici.tv'
