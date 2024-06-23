@@ -522,6 +522,9 @@ collections:
         JSTOR:
           value: 'JSTOR .*(online collection)'
           provider_param: 'JSTOR'
+        WAF:
+          value: 'Wright American fiction.*(online collection)'
+          provider_param: 'Indiana University'
   WCM - AGU:
     id affix value: 'AGU'
     add MARC field spec:
