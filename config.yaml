@@ -466,6 +466,9 @@ collections:
         FilmPlatform:
           value: 'Film Platform.*(online collection)'
           provider_param: 'Film Platform'
+        GAU:
+          value: 'Gale Archives Unbound.*(online collection)'
+          provider_param: 'Gale'
         GSW:
           value: 'GeoScienceWorld.*(online collection)'
           provider_param: 'GeoScienceWorld'
