@@ -493,6 +493,9 @@ collections:
         SPIE:
           value: 'SPIE ebooks.*(online collection)'
           provider_param: 'SPIE'
+        SRMO:
+          value: 'SAGE research methods.*(online collection)'
+          provider_param: 'SAGE'
         Swank:
           value: 'Swank .*(online collection)'
           provider_param: 'Swank'
