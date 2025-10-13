@@ -554,6 +554,29 @@ collections:
             value: 'Access limited to UNC Chapel Hill-authenticated users.'
           - delimiter: 'f'
             value: 'Unlimited simultaneous users'
+  WCM - ASP:
+    id affix value: 'ASP'
+    add MARC field spec:
+      - tag: '773'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 't'
+            value: 'OCLC WorldShare Collection Manager managed collection. ASP'
+      - tag: '590'
+        i1: '0'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Content provider: Alexander Street Press.'
+      - tag: '506'
+        i1: '1'
+        i2: ' '
+        subfields:
+          - delimiter: 'a'
+            value: 'Access limited to UNC Chapel Hill-authenticated users.'
+          - delimiter: 'f'
+            value: 'Unlimited simultaneous users'
   WCM - CRL:
     process_wcm_coverage: true
     id affix value: 'CRL'
