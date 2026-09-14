@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    marc_wrangler (0.1.6)
+    marc_wrangler (0.1.7)
       csv
       enhanced_marc (~> 0.3.2)
       highline (~> 3.1)
